@@ -157,10 +157,12 @@ else
           load(matfile); 
         else
 	  display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,q));
-          U = racah_Ukq(n,3,k,q);
+          U = racah_Ukq(n,3,k,q-1-k);
+	  U = U{q};
           save(matfile,'U');
         end
-        H_cf = H_cf + B{k}(q) .* U{q};
+        H_cf = H_cf + B{k}(q) .* U;
+%        H_cf = H_cf + B{k}(q) .* U{q};
 	% Time to calculate matrix: n=5, t=100s
         clear U;
       end

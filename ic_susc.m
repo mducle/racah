@@ -65,7 +65,7 @@ for ind_T = 1:size(T,2)
   susceptibility(ind_T) = ( mu_B^2/sum(Z(ind_T,:)) ) * sum_gamma;
 end
 
-susceptibility = susceptibility./mu_B;  % in u_B/T/atom
+%susceptibility = susceptibility./mu_B;  % in u_B/T/atom
 
 
 % Calculates the magnetisation M(ind_H,ind_T) per unit volume per atom;

@@ -1,23 +1,26 @@
 function mag = ic_mag(Hic,H,Jdir,T,mu)
 
-if iscell(Hic)
-  V = Hic{1}; E = Hic{2};
-  if ~isvector(E)
-    E = diag(E);
-  end
-  if (length(E) ~= size(V,1))
-    error('V and E must have same size or length');
-  end
-  E = real(E) - min(real(E));
-else
-  [V,E] = eig(Hic);
-  E = diag(E);
-  E = E - min(E);
-end
+%if iscell(Hic)
+%  V = Hic{1}; E = Hic{2};
+%  if ~isvector(E)
+%    E = diag(E);
+%  end
+%  if (length(E) ~= size(V,1))
+%    error('V and E must have same size or length');
+%  end
+%  E = real(E) - min(real(E));
+%else
+%  [V,E] = eig(Hic);
+%  E = diag(E);
+%  E = E - min(E);
+%end
 
 % Physical constants. Taken from NIST Reference on Constants, Units, and 
 % Uncertainty, http://physics.nist.gov/cuu/Constants/
-mu_B  = 927.400949e-26;    % J/Tesla - Bohr magneton
+%mu_B  = 927.400949e-26;    % J/Tesla - Bohr magneton
+%Hic = Hic .* 0.1239842436; % Converts to meV. 
+%mu_B = 5.78838263e-2;    % meV/T - Bohr magneton
+mu_B  = 0.46686437;        % cm^{-1} / Tesla - Bohr magneton
 k_B   = 1.3806505e-23;     % J/K - Boltzmann constant
 Q_e   = 1.60217653e-19;    % C - Charge of electron
 N_A   = 6.0221415e23;      % Avogadro's number
@@ -33,25 +36,24 @@ beta = 1 ./ (k_B*T);
 
 for ind_H = 1:size(H,2)
 % Calculates the total Hamiltonian as a function of field (last index)
-  Hmltn = Hcf + (-H(ind_H)*mu_B).*Jmat;
+  Hmltn = Hic + (-H(ind_H)*mu_B).*Jmat;
 
 % Calculates the eigenvectors V and eigenvalues (enegies) E
 % Where:            ---
 %        | V  >  =  >    a  |j, j    >
 %           i       ---i  i      z,i
 %
-  [V, Edummy] = eig(Hmltn);
+  [V, E] = eig(Hmltn);
 
 % Reduce the energy levels to a vector.
-  Edummy = sort( Edummy(logical(eye(size(Edummy,1)))) );
+  E = real(diag(E)); 
 % Sets energy levels relative to lowest level.
-  E = Edummy - min(Edummy);
+  E = E - min(E);
 
 % Converts energy levels from meV to J
   E = E .* (Q_e/1000);
 
-  mj = -J:J;
-  for ind_j = 1:size(V,2)
+  for ind_j = 1:length(E)
 % Calculates the matrix elements <Vi|J.H|Vi>
     me = V(:,ind_j)' * Jmat * V(:,ind_j);
 
@@ -70,7 +72,7 @@ for ind_H = 1:size(H,2)
 end
 
 % Calculates the magnetisation M(ind_H,ind_T) per unit volume per atom;
-M = exp_JH;  % in u_B/atom
+mag = exp_JH;  % in u_B/atom
 %M = g * mu_B * exp_JH .* N_A; % J/T/m^3/mol = A/m/mol
 %To get magnetisation in emu/g (cgs units): Get magnetisation in J/T/m^3/kg by
 %  M = g*exp_JH * mu_B * N_A/(molar mass). Then multiply by 4pi*10^{-7}.

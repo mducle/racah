@@ -1,9 +1,9 @@
 function [Ukq,states] = racah_Ukq(n,l,k,indq)
 % Calculates the matrix Ukq, after Elliot, Judd, and Runciman.
 
-if mod(k,2)~=0 || k>6 || k<2
-  error('Rank k must be 2,4,6');
-end
+%if mod(k,2)~=0 || k>6 || k<2
+%  error('Rank k must be 2,4,6');
+%end
 
 if ~exist('indq')
   indq = 1:(2*k+1);
@@ -11,8 +11,8 @@ else
   indq = indq + k+1;
 end
 
-%redmat = racah_Umat(n,l,k);
-load(sprintf('redmat%1g.mat',k));
+redmat = racah_Umat(n,l,k);
+%load(sprintf('redmat%1g.mat',k));
 
 statesLS = racah_states(n,l);
 
@@ -40,7 +40,7 @@ for iq = 1:(2*k+1); Ukq{iq} = zeros(num_states); end;
 for i = 1:num_states
   L = states{i}{2}; S = states{i}{1}; J = states{i}{5}; Jz = states{i}{6}; irm = states{i}{7};
   %for j = 1:num_states
-  for j = i:num_states   % Calculate only upper triangle. Time per q-value: 533.56s
+  for j = 1:num_states   % Calculate only upper triangle. Time per q-value: 533.56s
     Lp = states{j}{2}; Sp = states{j}{1}; Jp = states{j}{5}; Jzp = states{j}{6}; irmp = states{j}{7};
     for iq = indq
       q = iq-1-k;
@@ -57,7 +57,11 @@ for i = 1:num_states
 %        if mod(n,2)==1
 	  %rm2 = real( (-1)^(k+S+Lp+2*J-Jz) * sqrt((2*J+1)*(2*Jp+1)) * sixj([L J S; Jp Lp k]) * redmat(irm,irmp) ...
 	  %            * threej([J k Jp; -Jz q -Jzp]) );
-	  rm2 = real( (-1)^(J-Jz) * rm * threej([J k Jp; -Jz q -Jzp]) );
+	  %if q<0
+	  %rm2 = real( (-1)^(J-Jz-q) * rm * threej([J k Jp; -Jz q -Jzp]) );
+	  %else
+	  rm2 = real( (-1)^(J-Jz) * rm * threej([J k Jp; -Jz q Jzp]) );
+	  %end
           Ukq{iq}(i,j) = rm2;
 	  %if J~=Jp
           %  %Ukq{iq}(i,j) = min([sign(Jz) sign(Jzp)])*rm2;
@@ -82,6 +86,6 @@ for i = 1:num_states
   end
 end
 
-for iq = indq
-  Ukq{iq} = Ukq{iq} + Ukq{iq}' - eye(size(Ukq{iq})).*Ukq{iq};
-end
+%for iq = indq
+%  Ukq{iq} = Ukq{iq} + Ukq{iq}' - eye(size(Ukq{iq})).*Ukq{iq};
+%end

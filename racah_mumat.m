@@ -21,50 +21,61 @@ end
 
 num_states = length(states);
 
-for iq = 1:3; Ukq{iq} = zeros(num_states); end;
+for iq = 1:3; mu{iq} = zeros(num_states); end;
 for i = 1:num_states
   L = states{i}{2}; S = states{i}{1}; J = states{i}{5}; M = states{i}{6};
-  if J>1/2
-    g = 1 + (g_s-1) * (J*(J+1) - L*(L+1) + S*(S+1)) / (2*J*(J+1));
-    f = sqrt( (S+L+J+1)*(S+L-J+1)*(S+J-L)*(L+J-S) / (J^2*(2*J+1)*(2*J-1)) );
-    for j = 1:num_states
-      Lp = states{j}{2}; Sp = states{j}{1}; Jp = states{j}{5}; Mp = states{j}{6}; 
+  g = 1 + (g_s-1) * (J*(J+1) - L*(L+1) + S*(S+1)) / (2*J*(J+1));
+  denom = (J^2*(2*J+1)*(2*J-1));
+  if denom~=0
+    f  = sqrt( (S+L+J+1)*(S+L-J+1)*(S+J-L)*(L+J-S) / denom );
+%   f  = sqrt( (S+L+J+1)*(S+L-J+1)*(S+J-L)*(L+J-S) / (J^2*(2*J+1)*(2*J-1)) );
+  else
+    f = 0;
+  end
+  denom = ((J+1)^2*(2*(J+1)+1)*(2*(J+1)-1));
+  if denom~=0
+    fp = sqrt( (S+L+(J+1)+1)*(S+L-(J+1)+1)*(S+(J+1)-L)*(L+(J+1)-S) / denom );
+%   fp = sqrt( (S+L+(J+1)+1)*(S+L-(J+1)+1)*(S+(J+1)-L)*(L+(J+1)-S) / ((J+1)^2*(2*(J+1)+1)*(2*(J+1)-1)) );
+  else
+    fp = 0;
+  end
+  for j = 1:num_states
+    Lp = states{j}{2}; Sp = states{j}{1}; Jp = states{j}{5}; Mp = states{j}{6}; 
       
-      if L==Lp & S==Sp
-        if J==Jp
-          if M==Mp
-            mu{3}(i,j) = M*g;                         % mu_z
-          elseif M==(Mp+1)
-            mu{1}(i,j) = sqrt( (J+M+1)*(J-M) ) * g/2; % mu_x 
-            mu{2}(i,j) = sqrt(-(J+M+1)*(J-M) ) * g/2; % mu_y
-          elseif M==(Mp-1)
-            mu{1}(i,j) = sqrt( (J-M+1)*(J+M) ) * g/2;
-            mu{2}(i,j) =-sqrt(-(J-M+1)*(J+M) ) * g/2;
-          end
-        elseif J==(Jp-1)
-          if M==Mp
-            mu{3}(i,j) = (g_s-1) * sqrt(J^2-M^2) * f/2;
-          elseif M==(Mp+1)
-            mu{1}(i,j) = (g_s-1) * sqrt( (J-M-1)*(J-M) ) * f/4;
-            mu{2}(i,j) = (g_s-1) * sqrt( (J-M-1)*(J-M) ) * f/4;
-          elseif M==(Mp-1)
-            mu{1}(i,j) =-(g_s-1) * sqrt( (J+M-1)*(J+M) ) * f/4;
-            mu{2}(i,j) = (g_s-1) * sqrt(-(J+M-1)*(J+M) ) * f/4;
-          end
-        elseif J==(Jp+1)
-          if M==Mp
-            mu{3}(i,j) = (g_s-1) * sqrt( (J+M+1)*(J-M+1) ) * f/2;
-          elseif M==(Mp+1)
-            mu{1}(i,j) =-(g_s-1) * sqrt( (J+M+1)*(J+M+2) ) * f/4;
-            mu{2}(i,j) =-(g_s-1) * sqrt(-(J+M+1)*(J-M+2) ) * f/4;
-          elseif M==(Mp-1)
-            mu{1}(i,j) = (g_s-1) * sqrt( (J-M+1)*(J+M+2) ) * f/4;
-            mu{2}(i,j) =-(g_s-1) * sqrt(-(J-M+1)*(J+M+2) ) * f/4;
-          end
+    if states{i}{3}==states{j}{3} & states{i}{4}==states{j}{4} & L==Lp & S==Sp
+      if J==Jp
+        if M==Mp
+          mu{3}(i,j) = M*g;                         % mu_z
+        elseif Mp==(M+1)
+          mu{1}(i,j) = sqrt( (J+M+1)*(J-M) ) * g/2; % mu_x 
+          mu{2}(i,j) = sqrt(-(J+M+1)*(J-M) ) * g/2; % mu_y
+        elseif Mp==(M-1)
+          mu{1}(i,j) = sqrt( (J-M+1)*(J+M) ) * g/2;
+          mu{2}(i,j) =-sqrt(-(J-M+1)*(J+M) ) * g/2;
+        end
+      elseif Jp==(J-1)
+        if M==Mp
+          mu{3}(i,j) = (g_s-1) * sqrt(J^2-M^2) * f/2;
+        elseif Mp==(M+1)
+          mu{1}(i,j) = (g_s-1) * sqrt( (J-M-1)*(J-M) ) * f/4;
+          mu{2}(i,j) = (g_s-1) * sqrt(-(J-M-1)*(J-M) ) * f/4;
+        elseif Mp==(M-1)
+          mu{1}(i,j) =-(g_s-1) * sqrt( (J+M-1)*(J+M) ) * f/4;
+          mu{2}(i,j) = (g_s-1) * sqrt(-(J+M-1)*(J+M) ) * f/4;
+        end
+      elseif Jp==(J+1)
+        if M==Mp
+          mu{3}(i,j) = (g_s-1) * sqrt( (J+M+1)*(J-M+1) ) * fp/2;
+        elseif Mp==(M+1)
+          mu{1}(i,j) =-(g_s-1) * sqrt( (J+M+1)*(J+M+2) ) * fp/4;
+          mu{2}(i,j) =-(g_s-1) * sqrt(-(J+M+1)*(J+M+2) ) * fp/4;
+        elseif Mp==(M-1)
+          mu{1}(i,j) = (g_s-1) * sqrt( (J-M+1)*(J-M+2) ) * fp/4;
+          mu{2}(i,j) =-(g_s-1) * sqrt(-(J-M+1)*(J-M+2) ) * fp/4;
         end
       end
-
     end
+
   end
 end
 
