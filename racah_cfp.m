@@ -1,6 +1,23 @@
 function cfp = racah_cfp(n,U,v,S,L,Up,vp,Sp,Lp)
 % Calculates the coefficient of fractional parentage for l=3, after the method of Racah IV.
 
+if nargin==3 && ischar(U) && ischar(v)
+  if ~ischar(n)
+    nc = ['f' char(double(n)+48)];
+    np = ['f' char(double(n-1)+48)];
+  else
+    nc = n;
+    np = ['f' char(double(n(2)-1))];
+    n = double(n(2)-48);
+  end
+  stc = racah_states(nc,U);  % Child state
+  stp = racah_states(np,v);  % Parent state
+  U  = stc{4}; v  = stc{3}; S  = stc{1}; L  = stc{2};
+  Up = stp{4}; vp = stp{3}; Sp = stp{1}; Lp = stp{2};
+end
+
+%{U(1) U(2) v S L Up(1) Up(2) vp Sp Lp}
+
 if ~ischar(L)
   errmsg = sprintf(['You must specify the orbital angular momentum quantum number as S,P,D,F,G, etc. \n' ...
          'This is to specify certain combinations where the |vUSL> basis is not enough to distinguish \n' ...

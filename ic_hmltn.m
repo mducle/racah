@@ -121,9 +121,9 @@ end
 %     Size of CF matrices (NxN): n=2,B2: 91; n=3,B2: 364; n=4,B2: 1001; n=5,B2: 2002;
 H_cf = zeros(length(st_CF));
 if n<5
-  matfile = ['UVmat' sprintf('%1g',n) '.mat']
+  matfile = ['UVmat' sprintf('%1g',n) '.mat'];
   if exist(matfile,'file')==2
-    load matfile;
+    load(matfile);
     U = {U2 U4 U6};
   else
     U = {racah_Ukq(n,3,2) racah_Ukq(n,3,4) racah_Ukq(n,3,6)};

@@ -1,6 +1,20 @@
 function [cfp,parents,ind_parent] = racah_parents(n,l,v,U,S,L)
 % Finds the parents of an l^n configuration.
 
+if nargin<4
+  if nargin==3 && ischar(l) && ischar(v)
+    conf = [l n+48]
+    state = v;
+  else
+    conf = n;
+    state = l;
+    n = double(conf(2))-48;
+    l = conf(1);
+  end
+  stc = racah_states(conf,state);  % Child state
+  U  = stc{4}; v  = stc{3}; S  = stc{1}; L  = stc{2};
+end
+
 if ~ischar(L)
   errmsg = sprintf(['You must specify the orbital angular momentum quantum number as S,P,D,F,G, etc. \n' ...
          'This is to specify certain combinations where the |vUSL> basis is not enough to distinguish \n' ...
@@ -29,6 +43,6 @@ for i = 1:length(states_parent)
   end
 end
 
-if nargout==1
-  cfp = {cfp parents};
-end
+%if nargout==1
+%  cfp = {cfp parents};
+%end
