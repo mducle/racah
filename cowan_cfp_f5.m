@@ -17,6 +17,10 @@ if nargin==3 && ischar(U) && ischar(v)
   if strcmp(n,'f5')
     stc = U;
     stp = v;
+    [stf5,stidf5] = racah_states(5,3);
+    [stf4,stidf4] = racah_states(4,3);
+    istc = find(strcmp(U,stidf5));
+    istp = find(strcmp(v,stidf4));
   else
     error('Sorry only f5 implemented so far.');
   end
@@ -27,12 +31,14 @@ else
   for i = 1:length(stf5)
     if (U==stf5{i}{4}) & (v==stf5{i}{3}) & (S==stf5{i}{1}) & strcmp(L,stf5{i}{2})
       stc = stidf5{i};
+      istc = i;
       break
     end;
   end
   for i = 1:length(stf4)
     if (Up==stf4{i}{4}) & (vp==stf4{i}{3}) & (Sp==stf4{i}{1}) & strcmp(Lp,stf4{i}{2})
       stp = stidf4{i};
+      istp = i;
       break
     end
   end
@@ -41,6 +47,14 @@ else
     return
   end
 end
+
+% Time to look up all cfp of f5 using cfpmat: 16.14s
+% Time using cell array listings: 82.43s
+% Time using Racah's tables: 1.08s
+load 'cfpmat.mat'
+cfp = cfpmat(istc,istp);
+
+return;
 
 st_cowan_f4 = {'1D1' '1D2' '1D3' '1F' '1G1' '1G2' '1G3' '3D1' '3D2' '3F1' '3F2' '3F3' '3G1' '3G2' '3F4' '3G3' '1D4' '1G4' '1H1' '3P1' '3P2' '3P3' '3H1' '3H2' '3H3' '3H4' '1H2' '1S1' '1I1' '1S2' '1I2' '1I3' '3I1' '3I2' '1K' '3K1' '3K2' '1L1' '3L' '1L2' '3M' '1N' '5F' '5D' '5G' '5S' '5I'};
 
