@@ -1,4 +1,4 @@
-function [H_cf,st_CF] = ic_hmltn(conf,F,xi,B,r_fl)
+function [H_cf,st_CF] = ic_hmltn(conf,F,xi,B,alpha,r_fl)
 % Calculates the intermediate-coupling Hamiltonian after the method of Chan and Lam 1970
 % At present, this function only works for the f-electron configurations.
 %
@@ -52,6 +52,17 @@ if iscell(B) & length(B)==3
 else
   error('B must be a cell array of length 3')
 end
+% Checks alpha
+if exist('alpha','var')
+  if isscalar(alpha) || islogical(alpha)
+    r_fl = alpha;
+    clear alpha;
+  elseif isvector(alpha) && length(alpha)==3
+    cimat = racah_ci(n,3,alpha);
+  else
+    error('alpha must be a length-3 vector');
+  end
+end
 % Checks r_fl
 if exist('r_fl')
   E = F;
@@ -64,6 +75,11 @@ end
 
 % Calculates the electrostatic Hamiltonian
 Emat = racah_emat(n,3,E);
+
+% Calculates the Configuration Interaction Hamiltonian
+if exist('cimat')
+  Emat = Emat + cimat;
+end
 
 % Because the Spin-Orbit and Crystal Field Hamiltonian matrices take a very long time to compute, they
 % have been pre-computed and stored in a file: UVmatrices.mat

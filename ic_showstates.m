@@ -1,6 +1,6 @@
 function icstate = ic_showstates(conf,state)
 
-if ~iscell(state) | length(state)<6
+if ~iscell(state) | length(state)<5 | length(state)>6
   error('Invalid state cell')
 end
 
