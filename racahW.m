@@ -19,9 +19,9 @@ function out = racahW(A)
 %
 % where the triangle functions are:
 %
-%          (a+b-c)!(a-b+c)!(-a+b+e)!
+%          (a+b-c)!(a-b+c)!(-a+b+c)!
 % T(abc) = -------------------------
-%              (a + b + e + 1)!
+%              (a + b + c + 1)!
 %
 % The W functions are only defined for integer or half integer arguments that satisfy
 % the selection rule that the four triads (abe), (cde), (acf), and (bdf) has an integral

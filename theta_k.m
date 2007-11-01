@@ -36,7 +36,7 @@ if ~exist('state')
   end
   state = statesLS{i};
   J = LSJ(3); Jp = J;
-elseif iscell(state) & length(state)>5
+elseif iscell(state) & length(state)>4
   J = state{5};
 else
   error('Input "state" must be a cell array {S L v U J ...}, length 5 or more');
@@ -45,7 +45,7 @@ end
 if ~exist('statep')
   statep = state;
   Jp = J;
-elseif iscell(statep) & length(statep)>5
+elseif iscell(statep) & length(statep)>4
   Jp = statep{5};
   if J~=Jp
     return

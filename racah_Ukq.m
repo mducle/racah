@@ -1,4 +1,4 @@
-function [Ukq,states] = racah_Ukq(n,l,k,indq)
+function [Ukq,states] = racah_Ukq(n,l,k,indq,statesLS,Jind)
 % Calculates the matrix Ukq, after Elliot, Judd, and Runciman.
 
 %if mod(k,2)~=0 || k>6 || k<2
@@ -11,10 +11,12 @@ else
   indq = indq + k+1;
 end
 
-redmat = racah_Umat(n,l,k);
-%load(sprintf('redmat%1g.mat',k));
+if ~exist('statesLS')
+  statesLS = racah_states(n,l);
+end
 
-statesLS = racah_states(n,l);
+redmat = racah_Umat(n,l,k,statesLS);
+%load(sprintf('redmat%1g.mat',k));
 
 index = 0;
 for i = 1:length(statesLS)
@@ -22,7 +24,8 @@ for i = 1:length(statesLS)
   S = statesLS{i}{1};
   Jmin = abs(L-S); Jmax = L+S;
   %iredmat = 0;
-  for iJ = Jmin:Jmax
+  if ~exist('Jind'); Jind = Jmin:Jmax; end
+  for iJ = Jind %Jmin:Jmax
     %iredmat = iredmat + 1;
     for mJ = -iJ:iJ
       index = index + 1;
@@ -35,13 +38,20 @@ end
 
 num_states = length(states);
 
-for iq = 1:(2*k+1); Ukq{iq} = zeros(num_states); end;
+if size(indq~=1)
+  for iq = indq; Ukq{iq} = zeros(num_states); end;
+else
+  Ukq{iq} = zeros(num_states);
+end
 %for i = 1:num_states
 for i = 1:num_states
   L = states{i}{2}; S = states{i}{1}; J = states{i}{5}; Jz = states{i}{6}; irm = states{i}{7};
   %for j = 1:num_states
   for j = 1:num_states   % Calculate only upper triangle. Time per q-value: 533.56s
     Lp = states{j}{2}; Sp = states{j}{1}; Jp = states{j}{5}; Jzp = states{j}{6}; irmp = states{j}{7};
+
+    rm = (-1)^(k+S+L+J) * sqrt((2*J+1)*(2*Jp+1)) * sixj([L J S; Jp Lp k]) * redmat(irm,irmp);
+	
     for iq = indq
       q = iq-1-k;
 %      rm = (-1)^(S+k-L-Jp) * sqrt((2*J+1)*(2*Jp+1)) * racahW([L J Lp Jp S k]) * redmat(irm,irmp);
@@ -51,7 +61,7 @@ for i = 1:num_states
         % Using Eqn 4 of Chan and Lam, 1970
 %        Ukq{iq}(i,j) = (-1)^(k+S+Lp+(2*J)-Jz) * sqrt((2*J+1)*(2*Jp+1)) * threej([J k Jp; -Jz q Jzp]) ...
 %	               * sixj([L J S; Jp Lp k]) * redmat(irm,irmp);
-        rm = (-1)^(k+S+Lp+J) * sqrt((2*J+1)*(2*Jp+1)) * sixj([L J S; Jp Lp k]) * redmat(irm,irmp);
+    %   rm = (-1)^(k+S+Lp+J) * sqrt((2*J+1)*(2*Jp+1)) * sixj([L J S; Jp Lp k]) * redmat(irm,irmp);
         % NB. The 3j symbol as I've program takes as arguments: [j1 j2 j3; J1 J2 -J3]!!
         % So in notations, the 3j below should be: 3j([J k Jp; -Jz q Jzp])
 %        if mod(n,2)==1
@@ -60,7 +70,7 @@ for i = 1:num_states
 	  %if q<0
 	  %rm2 = real( (-1)^(J-Jz-q) * rm * threej([J k Jp; -Jz q -Jzp]) );
 	  %else
-	  rm2 = real( (-1)^(J-Jz) * rm * threej([J k Jp; -Jz q Jzp]) );
+	  rm2 = (-1)^(J-Jz-q) * rm * threej([J k Jp; -Jz q Jzp]);
 	  %end
           Ukq{iq}(i,j) = rm2;
 	  %if J~=Jp
@@ -89,3 +99,7 @@ end
 %for iq = indq
 %  Ukq{iq} = Ukq{iq} + Ukq{iq}' - eye(size(Ukq{iq})).*Ukq{iq};
 %end
+
+if length(indq)==1
+  Ukq = Ukq{indq};
+end
