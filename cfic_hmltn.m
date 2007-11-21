@@ -16,8 +16,6 @@ function Hcfic = cfic_hmltn(n,B2,B4,B6,LSstate,J)
 %
 % NB. If LSstate is a length 5 cell, you must also specify J. 
 
-icfact = [-0.73192505471140   0.88640526042792   -0.78285192907544];
-icfact = [1 1 1];
 icfact = [-sqrt(15/28)        sqrt(11/14)        -sqrt(429/700)   ];
 
 % Parses inputs

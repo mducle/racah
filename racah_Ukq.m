@@ -5,8 +5,6 @@ function [Ukq,states] = racah_Ukq(n,l,k,indq,statesLS,Jind)
 %  error('Rank k must be 2,4,6');
 %end
 
-icfact = [-0.73192505471140   0.88640526042792   -0.78285192907544];
-icfact = [1 1 1];
 icfact = [-sqrt(15/28)        sqrt(11/14)        -sqrt(429/700)   ];
 
 if ~exist('indq')
