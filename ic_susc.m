@@ -18,21 +18,29 @@ end
 % Physical constants. Taken from NIST Reference on Constants, Units, and 
 % Uncertainty, http://physics.nist.gov/cuu/Constants/
 mu_B  = 927.400949e-26;    % J/Tesla - Bohr magneton
+%mu_B  = 0.46686437;        % cm^{-1} / Tesla - Bohr magneton
 k_B   = 1.3806505e-23;     % J/K - Boltzmann constant
 Q_e   = 1.60217653e-19;    % C - Charge of electron
 N_A   = 6.0221415e23;      % Avogadro's number
+h     = 6.62606896e-34;    % Js - Planck's constant
+c     = 299792458;         % m/s - speed of light in vacuum
 
 % Defining beta = 1/kT here saves computation later on.
 beta = 1 ./ (k_B*T);
 
 % Converts energy levels from meV to J
-E = E .* (Q_e/1000);
+%E = E .* (Q_e/1000);
+E = E .* (h*c*100);
 
 % Defines smallness criteria
 small = 1e-5 * (Q_e/1000);
 
-iVs = find(E<(1*Q_e));     % Limits calculations to lower levels (<1eV) to save time
+% Defines the limit of energy levels to calculate for
+upElimit = 10000 * (h*c*100); % 15000cm-1
+
+iVs = find(E<(upElimit));     % Limits calculations to lower levels (<1eV) to save time
 for id_i = 1:length(iVs)
+  tic
   ind_i = iVs(id_i);
   % Calculates the degenerate terms
   i_degen = find(abs(E-E(ind_i))<small);
@@ -44,24 +52,26 @@ for id_i = 1:length(iVs)
   degen(ind_i) = sum(-me_degen.^2);
 
   % Calculates the nondegenerate terms
-  i_ndegen = find( (abs(E-E(ind_i))>=small) & E<(1*Q_e) );  % Limits calcs to levels <1eV to save time 
+  i_ndegen = find( (abs(E-E(ind_i))>=small) & E<(upElimit) );  % Limits calcs to levels <1eV to save time 
   me_ndegen = zeros(1,length(i_ndegen)); ndegen(:,ind_i) = zeros(length(T),1);
   for id_j = 1:length(i_ndegen)
     ind_j = i_ndegen(id_j);
     me_ndegen = V(:,ind_i)' * mu * V(:,ind_j);
     temp_fact = ( exp(-beta.*E(ind_i)) - exp(-beta.*E(ind_j)) ) ./ ( E(ind_j) - E(ind_i) );
+    % Sum sigma'' over gamma'
     ndegen(:,ind_i) = ndegen(:,ind_i) + ( (me_ndegen^2) .* temp_fact' );
   end
 
   % Calculates the elements of the partition function: exp(-Ei(H)/kT)
   Z(:,ind_i) = exp(-beta .* E(ind_i));
+  display(sprintf('Loop %1g of %1g completed in %0.2g min',id_i,length(iVs),toc/60));
 end
 
 for ind_T = 1:size(T,2)
   %sum_gamma = sum( (degen.*Z(ind_T,:)) + ndegen(ind_T,:) );
   %susceptibility(ind_T) = ( mu_B^2*beta(ind_T)/sum(Z(ind_T,:)) ) * sum_gamma;
   %susceptibility(ind_T) = sum( ((mu_B^2*beta(ind_T)/sum(Z(ind_T,:))).*degen.*Z(ind_T,:)) + ndegen(ind_T,:) );
-  sum_gamma = sum( (beta(ind_T).*degen.*Z(ind_T,:)) + ndegen(ind_T,:) );
+  sum_gamma = sum( (beta(ind_T).*degen.*Z(ind_T,:)) ) + sum( ndegen(ind_T,:) );
   susceptibility(ind_T) = ( mu_B^2/sum(Z(ind_T,:)) ) * sum_gamma;
 end
 

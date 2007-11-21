@@ -17,6 +17,8 @@ function [H_cf,st_CF] = ic_hmltn(conf,F,xi,B,alpha,r_fl)
 
 % By Duc Le 2007 - duc.le@ucl.ac.uk
 
+icfact = [-sqrt(15/7)/2       sqrt(11/14)        -sqrt(429/7)/10  ];
+
 if isnumeric(conf)
   if isscalar(conf)
     n = conf;
@@ -74,7 +76,12 @@ else            % Converts Slater integrals into Racah parameters, after Racah I
 end
 
 % Calculates the electrostatic Hamiltonian
-Emat = racah_emat(n,3,E);
+if exist('emat','file')==2
+  load('emat');
+  Emat = E(1).*s_emat{n,1} + E(2).*s_emat{n,2} + E(3).*s_emat{n,3} + E(4).*s_emat{n,4};
+else
+  Emat = racah_emat(n,3,E);
+end
 
 % Calculates the Configuration Interaction Hamiltonian
 if exist('cimat')
@@ -98,7 +105,11 @@ if exist(matfile,'file')==2
   load(matfile);
   H_SO = H_SO.*xi;
 else
-  [H_SO,st_SO] = racah_so(n,3,xi);
+  display(sprintf('Calculating Spin-Orbit Matrix for n=%1g',n)); tic
+  [H_SO,st_SO] = racah_so(n,3,1);
+  display(sprintf('Time elapsed = %0.5g min',toc/60));
+  save(matfile,'H_SO','st_SO');
+  H_SO = H_SO.*xi;
 end
 % Re-expresses the electrostatic energy matrix from the |vUSL> basis to the |vUSLJ> basis
 for i = 1:length(st_SO)
@@ -142,7 +153,14 @@ if n<5
     load(matfile);
     U = {U2 U4 U6};
   else
-    U = {racah_Ukq(n,3,2) racah_Ukq(n,3,4) racah_Ukq(n,3,6)};
+    display(sprintf('Calculating CF Matrix for k=2')); tic; U2 = w_racah_Ukq(n,3,2); 
+    display(sprintf('Time elapsed = %0.5g min',toc/60));
+    display(sprintf('Calculating CF Matrix for k=2')); tic; U4 = w_racah_Ukq(n,3,4);
+    display(sprintf('Time elapsed = %0.5g min',toc/60));
+    display(sprintf('Calculating CF Matrix for k=2')); tic; U6 = w_racah_Ukq(n,3,6);
+    display(sprintf('Time elapsed = %0.5g min',toc/60));
+    save(matfile,'U2','U4','U6');
+    U = {U2 U4 U6};
   end
   for k = 1:3
     for q = 1:(4*k+1)
@@ -171,10 +189,11 @@ else
 	end
         if exist(matfile,'file')==2
           load(matfile); 
+	  U = U./icfact(k);
         else
-	  display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,q));
-          U = racah_Ukq(n,3,k,q-1-k);
-	  U = U{q};
+	  display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,q-1-(2*k))); tic;
+          U = w_racah_Ukq(n,3,2*k,q-1-(2*k));
+          display(sprintf('Time elapsed = %0.5g min',toc/60));
           save(matfile,'U');
         end
         H_cf = H_cf + B{k}(q) .* U;

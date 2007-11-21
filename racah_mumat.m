@@ -1,8 +1,9 @@
 function mu = racah_mumat(n,l)
 % Calculates the magnetic moment operator matrices mu_x, mu_y, mu_z in the |vSLJM> basis
 
-% Constants
-g_s = 2.0;     % electronic gyromagnetic ratio
+% Physical constants. Taken from NIST Reference on Constants, Units, and 
+% Uncertainty, http://physics.nist.gov/cuu/Constants/
+g_s = 2.0023193043622;     % electronic g-factor
 
 statesLS = racah_states(n,l);
 

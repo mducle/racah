@@ -24,6 +24,8 @@ mu_B  = 0.46686437;        % cm^{-1} / Tesla - Bohr magneton
 k_B   = 1.3806505e-23;     % J/K - Boltzmann constant
 Q_e   = 1.60217653e-19;    % C - Charge of electron
 N_A   = 6.0221415e23;      % Avogadro's number
+h     = 6.62606896e-34;    % Js - Planck's constant
+c     = 299792458;         % m/s - speed of light in vacuum
 
 % Normalises the direction vector
 Jdir = Jdir ./ sqrt(Jdir*Jdir');
@@ -51,7 +53,10 @@ for ind_H = 1:size(H,2)
   E = E - min(E);
 
 % Converts energy levels from meV to J
-  E = E .* (Q_e/1000);
+%  E = E .* (Q_e/1000);
+
+% Converts energy levels from cm^{-1} to J - NB. E = hf = hc/lambda in metres!
+  E = E .* (h*c*100);
 
   for ind_j = 1:length(E)
 % Calculates the matrix elements <Vi|J.H|Vi>

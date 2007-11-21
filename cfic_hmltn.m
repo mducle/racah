@@ -16,6 +16,10 @@ function Hcfic = cfic_hmltn(n,B2,B4,B6,LSstate,J)
 %
 % NB. If LSstate is a length 5 cell, you must also specify J. 
 
+icfact = [-0.73192505471140   0.88640526042792   -0.78285192907544];
+icfact = [1 1 1];
+icfact = [-sqrt(15/28)        sqrt(11/14)        -sqrt(429/700)   ];
+
 % Parses inputs
 
 if iscell(B4) 
@@ -38,6 +42,8 @@ if iscell(B2) && length(B2)==3
   if length(B2{2})==9;  B4 = B2{2}; else; error('B4 must be length 9');  end
   if length(B2{3})==13; B6 = B2{3}; else; error('B6 must be length 13'); end
   if length(B2{1})==5;  B2 = B2{1}; else; error('B2 must be length 5');  end
+elseif isvector(B2)
+  if length(B2)~=5; error('B2 must be length 5'); end
 else
   error('B must be a length 3 cell array');
 end
@@ -86,7 +92,7 @@ for ik = indk
       
       for iq = indq{ik}
         q = iq-1-k;
-        Hcfic(i,j) = Hcfic(i,j) + (-1)^(J+Jz+k+q) * (1/sqrt(2*k+1)) * rm * wigner([J Jp -Jz Jzp J Jp k -q]) * B{ik}(iq);
+        Hcfic(i,j) = Hcfic(i,j) + (-1)^(J+Jz+k+q) * (1/sqrt(2*k+1)) * rm * wigner([J Jp -Jz Jzp J Jp k -q]) * B{ik}(iq) / icfact(ik);
       end  % q loop
 
     end    % j loop

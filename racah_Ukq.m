@@ -5,6 +5,10 @@ function [Ukq,states] = racah_Ukq(n,l,k,indq,statesLS,Jind)
 %  error('Rank k must be 2,4,6');
 %end
 
+icfact = [-0.73192505471140   0.88640526042792   -0.78285192907544];
+icfact = [1 1 1];
+icfact = [-sqrt(15/28)        sqrt(11/14)        -sqrt(429/700)   ];
+
 if ~exist('indq')
   indq = 1:(2*k+1);
 else
@@ -15,6 +19,8 @@ if ~exist('statesLS')
   statesLS = racah_states(n,l);
 end
 
+if ~exist('Jind'); Jind_flag = 1; end
+
 redmat = racah_Umat(n,l,k,statesLS);
 %load(sprintf('redmat%1g.mat',k));
 
@@ -24,7 +30,7 @@ for i = 1:length(statesLS)
   S = statesLS{i}{1};
   Jmin = abs(L-S); Jmax = L+S;
   %iredmat = 0;
-  if ~exist('Jind'); Jind = Jmin:Jmax; end
+  if exist('Jind_flag'); Jind = Jmin:Jmax; end
   for iJ = Jind %Jmin:Jmax
     %iredmat = iredmat + 1;
     for mJ = -iJ:iJ
@@ -72,7 +78,7 @@ for i = 1:num_states
 	  %else
 	  rm2 = (-1)^(J-Jz-q) * rm * threej([J k Jp; -Jz q Jzp]);
 	  %end
-          Ukq{iq}(i,j) = rm2;
+          Ukq{iq}(i,j) = rm2 / icfact(k/2);
 	  %if J~=Jp
           %  %Ukq{iq}(i,j) = min([sign(Jz) sign(Jzp)])*rm2;
           %  Ukq{iq}(i,j) = sign(Jz)*rm2;
