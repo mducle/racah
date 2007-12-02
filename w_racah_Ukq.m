@@ -1,7 +1,6 @@
 function [Ukq,states] = racah_Ukq(n,l,k,indq,statesLS,Jind)
 % Calculates the matrix Ukq, after Elliot, Judd, and Runciman.
 
-%cfact = [-0.73192505471140   0.88640526042792   -0.78285192907544];
 icfact = [-sqrt(15/7)/2       sqrt(11/14)        -sqrt(429/7)/10  ];
 
 if ~exist('indq')

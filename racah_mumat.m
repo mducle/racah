@@ -25,7 +25,7 @@ num_states = length(states);
 for iq = 1:3; mu{iq} = zeros(num_states); end;
 for i = 1:num_states
   L = states{i}{2}; S = states{i}{1}; J = states{i}{5}; M = states{i}{6};
-  g = 1 + (g_s-1) * (J*(J+1) - L*(L+1) + S*(S+1)) / (2*J*(J+1));
+  if J~=0; g = 1 + (g_s-1) * (J*(J+1) - L*(L+1) + S*(S+1)) / (2*J*(J+1)); else; g = 0; end;
   denom = (J^2*(2*J+1)*(2*J-1));
   if denom~=0
     f  = sqrt( (S+L+J+1)*(S+L-J+1)*(S+J-L)*(L+J-S) / denom );

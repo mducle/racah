@@ -107,8 +107,18 @@ if exist(matfile,'file')==2
 else
   display(sprintf('Calculating Spin-Orbit Matrix for n=%1g',n)); tic
   [H_SO,st_SO] = racah_so(n,3,1);
-  display(sprintf('Time elapsed = %0.5g min',toc/60));
-  save(matfile,'H_SO','st_SO');
+  if n<5
+    display(sprintf('Time elapsed = %0.5g min',toc/60));
+    display(sprintf('Calculating CF Matrix for k=2')); tic; U2 = fast_ukq(n,3,2); 
+    display(sprintf('Time elapsed = %0.5g min',toc/60));
+    display(sprintf('Calculating CF Matrix for k=4')); tic; U4 = fast_ukq(n,3,4);
+    display(sprintf('Time elapsed = %0.5g min',toc/60));
+    display(sprintf('Calculating CF Matrix for k=6')); tic; U6 = fast_ukq(n,3,6);
+    display(sprintf('Time elapsed = %0.5g min',toc/60));
+    save(matfile,'U2','U4','U6','H_SO','st_SO');
+  else
+    save(matfile,'H_SO','st_SO');
+  end
   H_SO = H_SO.*xi;
 end
 % Re-expresses the electrostatic energy matrix from the |vUSL> basis to the |vUSLJ> basis
@@ -149,19 +159,8 @@ end
 H_cf = zeros(length(st_CF));
 if n<5
   matfile = ['UVmat' sprintf('%1g',n) '.mat'];
-  if exist(matfile,'file')==2
-    load(matfile);
-    U = {U2 U4 U6};
-  else
-    display(sprintf('Calculating CF Matrix for k=2')); tic; U2 = w_racah_Ukq(n,3,2); 
-    display(sprintf('Time elapsed = %0.5g min',toc/60));
-    display(sprintf('Calculating CF Matrix for k=2')); tic; U4 = w_racah_Ukq(n,3,4);
-    display(sprintf('Time elapsed = %0.5g min',toc/60));
-    display(sprintf('Calculating CF Matrix for k=2')); tic; U6 = w_racah_Ukq(n,3,6);
-    display(sprintf('Time elapsed = %0.5g min',toc/60));
-    save(matfile,'U2','U4','U6');
-    U = {U2 U4 U6};
-  end
+  load(matfile);
+  U = {U2 U4 U6};
   for k = 1:3
     for q = 1:(4*k+1)
       H_cf = H_cf + B{k}(q) .* U{k}{q};
@@ -192,7 +191,7 @@ else
 	  U = U./icfact(k);
         else
 	  display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,q-1-(2*k))); tic;
-          U = w_racah_Ukq(n,3,2*k,q-1-(2*k));
+          U = fast_ukq(n,3,2*k,q-1-(2*k));
           display(sprintf('Time elapsed = %0.5g min',toc/60));
           save(matfile,'U');
         end
