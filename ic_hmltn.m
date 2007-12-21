@@ -1,4 +1,4 @@
-function [H_cf,st_CF] = ic_hmltn(conf,F,xi,B,alpha,r_fl)
+function [H_cf,st_CF] = ic_hmltn(conf,F,xi,B,alpha,T,M,P,r_fl)
 % Calculates the intermediate-coupling Hamiltonian after the method of Chan and Lam 1970
 % At present, this function only works for the f-electron configurations.
 %
@@ -65,6 +65,36 @@ if exist('alpha','var')
     error('alpha must be a length-3 vector');
   end
 end
+% Checks T
+if exist('T','var')
+  if isscalar(T) || islogical(T)
+    r_fl = T;
+    clear T;
+  elseif isvector(T) && (length(T)==6 || length(T)>=8)
+    timat = judd_tichain(n,3,T);
+  elseif isvector(T) && length(T)==3 && exist('M','var') && length(M)==4
+    P = M; M = T; clear T;
+  else
+    error('T must be a length 6 (or >=8) vector');
+  end
+end
+% Checks M,P
+if exist('M','var')
+  if isscalar(M) || islogical(M)
+    r_fl = T;
+    clear T;
+  elseif isvector(M) && length(M)==3 && exist('P','var') && length(P)==4
+    HssHsoo = judd_HssHsoo(n,3,M,P);
+  elseif isvector(M) && length(M)==12
+    HssHsoo = judd_HssHsoo(n,3,M);
+    if exist('P','var') && (isscalar(P) || islogical(P))
+      r_fl = P;
+      clear P;
+    end
+  else
+    error('You must specify both M (length 3) and P (length 4), or a single length 12 vector a_i');
+  end
+end
 % Checks r_fl
 if exist('r_fl')
   E = F;
@@ -85,8 +115,13 @@ end
 
 % Calculates the Configuration Interaction Hamiltonian
 if exist('cimat')
-  Emat = Emat + cimat;
+  Emat = Emat + cimat;         % The two-electron operators: alpha*L^2 + beta*G(R7) + gamma*G(G2)
 end
+if exist('timat')
+  Emat = Emat + timat;         % The three electron operators: sum_i(T^i*t_i) i=2,3,4,6,7,8 
+end
+
+Emat = sparse(Emat);
 
 % Because the Spin-Orbit and Crystal Field Hamiltonian matrices take a very long time to compute, they
 % have been pre-computed and stored in a file: UVmatrices.mat
@@ -122,8 +157,9 @@ else
   H_SO = H_SO.*xi;
 end
 % Re-expresses the electrostatic energy matrix from the |vUSL> basis to the |vUSLJ> basis
-for i = 1:length(st_SO)
-  for j = 1:length(st_SO)
+lstSO = length(st_SO); H_El = sparse(lstSO,lstSO);
+for i = 1:lstSO
+  for j = 1:lstSO
     if (st_SO{i}{5}==st_SO{j}{5}) % J==J'
       H_El(i,j) = Emat(st_SO{i}{6},st_SO{j}{6});
     end
@@ -132,6 +168,11 @@ end
 % Calculates the Russell-Saunders (LS) coupling basis states from the Electrostatic+SO Hamiltonians.
 H_LS = H_El + H_SO;
 %[Vls,Els] = eig(H_LS);
+
+% Adds in the spin-spin, spin-other-orbit, and spin-orbit configuration interactions if applicable
+if exist('HssHsoo')
+  H_LS = H_LS + HssHsoo;
+end
 
 %H_cf = H_LS; st_CF = st_SO; if 0
 % Calculates the projection operator matrix, after Chan and Lam for the first 6 J-multiplets
@@ -156,7 +197,7 @@ end
 % Calculates the crystal field Hamiltonian
 % NB. Times to calculate the CF matrices are: n=2,B2: 27.305s; n=3,B2: 483.62s; n=4,B2: 2957s; n=5,B2: 9802.8s
 %     Size of CF matrices (NxN): n=2,B2: 91; n=3,B2: 364; n=4,B2: 1001; n=5,B2: 2002;
-H_cf = zeros(length(st_CF));
+H_cf = sparse(length(st_CF),length(st_CF));
 if n<5
   matfile = ['UVmat' sprintf('%1g',n) '.mat'];
   load(matfile);

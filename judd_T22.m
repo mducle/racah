@@ -1,4 +1,4 @@
-function T22 = judd_T22(n,l)
+function T22 = judd_T22(n,l,nold,oldz)
 % Calculates the z_i operators (i=1-4) that forms the T^(22) tensor representing the spin-spin Hamiltonian 
 
 if ~isscalar(n) | ~isscalar(l) | ~isnumeric(n) | ~isnumeric(l) 
@@ -40,9 +40,16 @@ z4 = [  1            0              0           0           0           0       
 
 z1 = z1+triu(z1,1)'; z2 = z2+triu(z2,1)'; z3 = z3+triu(z3,1)'; z4 = z4+triu(z4,1)';
 
-oldz = {z1 z2 z3 z4}; st_old = racah_states(2,l); s = 1/2; t = 2;
+if ~exist('nold') || ~exist('oldz')
+  nold = 2;
+  oldz = {z1 z2 z3 z4};
+  T22.f2 = {z1 z2 z3 z4};
+elseif isstruct(oldz)
+  T22 = oldz;
+  oldz = T22.(sprintf('%c%1g',lower(racah_lconv(l)),nold));
+end
 
-T22.f2 = {z1 z2 z3 z4};
+st_old = racah_states(nold,l); s = 1/2; t = 2;
 
 if n==2
   return;
@@ -52,7 +59,7 @@ elseif n<2
   error('number of equivalent electrons is invalid (1, 0 or negative!)');
 end
 
-for n_calc = 3:n
+for n_calc = (nold+1):n
     
   display(sprintf('Calculating matrix for %c^%1g',lower(racah_lconv(l)),n_calc)); tic
 
@@ -68,22 +75,31 @@ for n_calc = 3:n
     lTriFact(:,i) = LSdiff(i)-LSdiff;
   end
   lTriFact = tril((-1).^lTriFact,-1);
-  for i = 1:length(st_old)
+  num_old = length(st_old);
+  for i = 1:num_old
     Sb(i) = st_old{i}{1}; Lb(i) = racah_lconv(st_old{i}{2});
   end  
 
+  %zm = zeros(num_states,num_states,num_old,num_old);
   for im = 1:4
-    z{im} = zeros(num_states);
+    z{im} = sparse(num_states,num_states);
     for i = 1:num_states        % Calculates only the upper triangle
       for j = i:num_states      % Lower triangle is related by: <x|H|x'> = (-1)^((L-S)-(L'-S'))<x'|H|x>
         if abs(S(j)-S(i))<=2 && abs(L(j)-L(i))<=2
           [inz,jnz] = find( cfp{i}'*cfp{j}.*oldz{im} );
+	  if im==1; zm{i,j} = sparse(num_old,num_old); end
           for p = 1:length(inz);
             pi = inz(p); pj = jnz(p);
-	    z{im}(i,j) = z{im}(i,j) + ( cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
-                                        * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1)) ...
-                                        * sixj([S(i) t S(j); Sb(pj) s Sb(pi)]) ...
-                                        * sixj([L(i) t L(j); Lb(pj) l Lb(pi)]) * oldz{im}(pi,pj) );
+	    if zm{i,j}(pi,pj)==0
+	      zm{i,j}(pi,pj) = ( cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
+                                * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1)) ...
+                                * sixj([S(i) t S(j); Sb(pj) s Sb(pi)]) * sixj([L(i) t L(j); Lb(pj) l Lb(pi)]) );
+            end
+	    z{im}(i,j) = z{im}(i,j) + zm{i,j}(pi,pj)*oldz{im}(pi,pj);
+	    %z{im}(i,j) = z{im}(i,j) + ( cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
+            %                            * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1)) ...
+            %                            * sixj([S(i) t S(j); Sb(pj) s Sb(pi)]) ...
+            %                            * sixj([L(i) t L(j); Lb(pj) l Lb(pi)]) * oldz{im}(pi,pj) );
           end
         end % if /\S=0,1,2, /\L=0,1,2
       end
@@ -106,3 +122,5 @@ for n_calc = 3:n
   st_old = st_now;
 
 end
+
+% Time taken to calculate all 4 matrices: f5=3.6min f6=12min f7=25min
