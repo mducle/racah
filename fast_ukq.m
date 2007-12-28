@@ -29,9 +29,6 @@ function [Ukq,states] = fast_ukq(n,l,k,indq)
 % for f5 on a Pentium M 1.6GHz. The original racah_Ukq function which calculated
 % every matrix element took approx 6s for f2 and approx 45min for f5. 
 
-% k-dependent factors to convert from the <psi|Ukq|psi'> matrix to the crystal field matrix.
-icfact = [-sqrt(15/7)/2       sqrt(11/14)        -sqrt(429/7)/10  ];
-
 if ~exist('indq')
   indq = 1:(2*k+1);
 else
@@ -39,7 +36,7 @@ else
 end
 
 statesLS = racah_states(n,l);
-redmat = racah_Umat(n,l,k,statesLS) ./ icfact(k/2);
+redmat = racah_Umat(n,l,k,statesLS);
 
 % Determines the L S J values for each matrix elements and the index of each J-J' block
 num_states = 0; LStest = [0 0];

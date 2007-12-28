@@ -167,7 +167,6 @@ for i = 1:lstSO
 end
 % Calculates the Russell-Saunders (LS) coupling basis states from the Electrostatic+SO Hamiltonians.
 H_LS = H_El + H_SO;
-%[Vls,Els] = eig(H_LS);
 
 % Adds in the spin-spin, spin-other-orbit, and spin-orbit configuration interactions if applicable
 if exist('HssHsoo')
@@ -195,8 +194,6 @@ for i = 1:length(st_SO)
 end
 
 % Calculates the crystal field Hamiltonian
-% NB. Times to calculate the CF matrices are: n=2,B2: 27.305s; n=3,B2: 483.62s; n=4,B2: 2957s; n=5,B2: 9802.8s
-%     Size of CF matrices (NxN): n=2,B2: 91; n=3,B2: 364; n=4,B2: 1001; n=5,B2: 2002;
 H_cf = sparse(length(st_CF),length(st_CF));
 if n<5
   matfile = ['UVmat' sprintf('%1g',n) '.mat'];
@@ -204,22 +201,10 @@ if n<5
   U = {U2 U4 U6};
   for k = 1:3
     for q = 1:(4*k+1)
-      H_cf = H_cf + B{k}(q) .* U{k}{q};
+      H_cf = H_cf + B{k}(q) .* (U{k}{q}./icfact(k));
     end
   end
 else
-%  % Loading and calculating all values of k and q. Elasped time for n=5: 438.13s
-%  matfile = ['UVmat' sprintf('%1g',n) 'U2.mat'];
-%  if exist(matfile,'file')==2; load(matfile); else; U2 = racah_Ukq(n,3,2); end
-%  for q = 1:(4*1+1); H_cf = H_cf + B{1}(q) .* U2{q}; end; clear U2;
-%
-%  matfile = ['UVmat' sprintf('%1g',n) 'U4.mat'];
-%  if exist(matfile,'file')==2; load(matfile); else; U4 = racah_Ukq(n,3,4); end
-%  for q = 1:(4*2+1); H_cf = H_cf + B{2}(q) .* U4{q}; end; clear U4;
-%
-%  matfile = ['UVmat' sprintf('%1g',n) 'U6.mat'];
-%  if exist(matfile,'file')==2; load(matfile); else; U6 = racah_Ukq(n,3,6); end
-%  for q = 1:(4*3+1); H_cf = H_cf + B{3}(q) .* U6{q}; end; clear U6;
 
   for k = 1:3
     for q = 1:(4*k+1)
@@ -229,16 +214,13 @@ else
 	end
         if exist(matfile,'file')==2
           load(matfile); 
-	  U = U./icfact(k);
         else
 	  display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,q-1-(2*k))); tic;
           U = fast_ukq(n,3,2*k,q-1-(2*k));
           display(sprintf('Time elapsed = %0.5g min',toc/60));
           save(matfile,'U');
         end
-        H_cf = H_cf + B{k}(q) .* U;
-%        H_cf = H_cf + B{k}(q) .* U{q};
-	% Time to calculate matrix: n=5, t=100s
+        H_cf = H_cf + B{k}(q) .* (U./icfact(k));
         clear U;
       end
     end
@@ -254,11 +236,3 @@ for i = 1:length(st_CF)
     end
   end
 end
-
-%end
-% Calculates the truncated LS-coupling basis states.
-%[V,E] = eig(P * (H_LS + H_cf) * P');
-
-% NB. Times for MATLAB to diagonalised NxN matrices: N=500, t=1.94888s; N=1000, t=17.714922s; N=5000, t=3221.718853s
-
-% NB. for n=5, time to set up and diagonalise H_ic from loading Ukq, is 726.75s

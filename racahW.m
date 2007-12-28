@@ -36,11 +36,10 @@ a = A(1); b = A(2); c = A(3);
 d = A(4); e = A(5); f = A(6);
 
 % Defines a 4x3 matrix to store the elements of the triangular coefficients
-m = zeros(4,3);
-m(1,:) = [a b e];
-m(2,:) = [c d e];
-m(3,:) = [a c f];
-m(4,:) = [b d f];
+m = [a b e;
+     c d e;
+     a c f;
+     b d f];
 
 % Selection rules:
 % The triads (a b e), (c d e), (a c f), (b d f)
@@ -60,19 +59,13 @@ tb = factorial(m(:,1)+m(:,2)+m(:,3)+1);
 tr = tr(:); tb = tb(:);
 
 % Defines a vector to store individual factorial arguments of f(t)
-F(1) = a + b - e; F(2) = c + d - e;
-F(3) = a + c - f; F(4) = b + d - f;
-F(5) = e + f - a - d;
-F(6) = e + f - b - c;
+F = [a+b-e c+d-e a+c-f b+d-f e+f-a-d e+f-b-c];
 
 % Calculates the sum over z
-sum_z = 0;
-%for z = -min(F(5:6)):min(F(1:4))
-for z = 0:20
-  if isequal([z F(1:4)-z F(5:6)+z],abs([z F(1:4)-z F(5:6)+z]))
-    %[z F(1:4)-z F(5:6)+z]
-    sum_z = sum_z + (-1)^z * factorial(a+b+c+d+1-z) / prod(factorial([z F(1:4)-z F(5:6)+z]));
-  end
-end
-
-out = sqrt(prod(tr./tb)) * sum_z;
+%sum_z = 0;
+%for z = max([0 -F(5:6)]):min([F(1:4) a+b+c+d+1])
+%    sum_z = sum_z + (-1)^z * factorial(a+b+c+d+1-z) / prod(factorial([z F(1:4)-z F(5:6)+z]));
+%end
+z = max([0 -F(5:6)]):min([F(1:4) a+b+c+d+1]);
+out = sqrt(prod(tr./tb)) * ...% sum_z;
+      sum( (-1).^z .* factorial(a+b+c+d+1-z) ./ prod(factorial([z;F(1)-z;F(2)-z;F(3)-z;F(4)-z;F(5)+z;F(6)+z])) );

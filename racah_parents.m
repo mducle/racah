@@ -28,11 +28,12 @@ states_parent = racah_states(n-1,l);
 
 index = 0; parents = {}; cfp = []; ind_parent = [];
 for i = 1:length(states_parent)
+  vp = states_parent{i}{3}; if abs(vp-v)>1; continue; end  % Condition on v's for cfp
   Sp = states_parent{i}{1};
   if abs(Sp-S)<=1/2             % Difference between S_child and S_parent <= S_single_electron=1/2
     Lsp = states_parent{i}{2}; Lp = racah_lconv(Lsp);
     if abs(Lp-L)<=l             % Difference between L_child and L_parent <= l_single_electron=l
-      cfp_tmp = racah_cfp(n,U,v,S,Ls,states_parent{i}{4},states_parent{i}{3},Sp,Lsp);
+      cfp_tmp = racah_cfp(n,U,v,S,Ls,states_parent{i}{4},vp,Sp,Lsp);
       if cfp_tmp~=0
         index = index + 1;
         parents{index} = states_parent{i};
