@@ -61,9 +61,9 @@ if (nargin>1)
   index = 0;
   for i = 1:length(statesLS)
     for iJ = Jmin:Jmax
-      for imJ = -Jmin:Jmax
+      for imJ = -iJ:iJ
         index = index + 1;
-        states{index} = {S L statesLS{i}{3:4} iJ imJ i};
+        states{index} = {statesLS{i}{1} racah_lconv(statesLS{i}{2}) statesLS{i}{3:4} iJ imJ i};
       end
     end
   end
