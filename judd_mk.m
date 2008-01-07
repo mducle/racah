@@ -1,10 +1,10 @@
-function Hss = judd_Hss(n,l,M,cellflag)
+function Hss = judd_Hss(n,l,nold,oldm)
 % Calculates the spin-spin Hamiltonian for the l^n configuration by a chain-calculation
 
 if ~isscalar(n) | ~isscalar(l) | ~isnumeric(n) | ~isnumeric(l) 
   error('n, l must be numerical scalars');
-elseif ~isvector(M) | length(M)~=3
-  error('M must be a three-component vector');
+%elseif ~isvector(M) | length(M)~=3
+%  error('M must be a three-component vector');
 end
 
 
@@ -78,24 +78,40 @@ n4 = [-900/11        0              0       10/11      115/11           0       
 
 n0 = n0+triu(n0,1)'; n2 = n2+triu(n2,1)'; n4 = n4+triu(n4,1)';
 
-oldm22 = {m0 m2 m4}; oldm11 = {n0 n2 n4}; st_old = racah_states(2,l); s = 1/2; tm = 2; tn = 1;
-
-H = (m0+n0).*M(1) + (m2+n2).*M(2) + (m4+n4).*M(3);
-if nargin==4
-  Hss.f2 = {m0 m2 m4 n0 n2 n4 H};
-else
-  Hss = H;
+if ~exist('nold','var') || ~exist('oldm','var')
+  nold = 2;
+  oldm11 = {n0 n2 n4}; oldm22 = {m0 m2 m4};
+  Hss.f2 = {m0 m2 m4 n0 n2 n4};
+elseif isstruct(oldm)
+  Hss = oldm;
+  oldm = Hss.(sprintf('%c%1g',lower(racah_lconv(l)),nold));
+  oldm11 = oldm(4:6);  oldm22 = oldm(1:3);
 end
+
+%oldm22 = {m0 m2 m4}; oldm11 = {n0 n2 n4}; st_old = racah_states(2,l); s = 1/2; tm = 2; tn = 1;
+st_old = racah_states(nold,l); s = 1/2; tm = 2; tn = 1;
+
+%H = (m0+n0).*M(1) + (m2+n2).*M(2) + (m4+n4).*M(3);
+%if nargin==4
+%  Hss.f2 = {m0 m2 m4 n0 n2 n4 H};
+%else
+%  Hss = H;
+%end
 
 if n==2
   return;
-elseif n<2 || n>14
-  error('number of equivalent electron, n, must be between 2 and 14');
+%elseif n<2 || n>14
+%  error('number of equivalent electron, n, must be between 2 and 14');
+%end
+elseif n>(2*(2*l+1))
+  error('number of equivalent electrons, n>2(2l+1), greater than allowed orbital angular momenta');
+elseif n<2
+  error('number of equivalent electrons is invalid (1, 0 or negative!)');
 end
 
-for n_calc = 3:n
+for n_calc = (nold+1):n
     
-  display(sprintf('Calculating matrix for %c^%1g',lower(racah_lconv(l)),n_calc)); tic
+  display(sprintf('Calculating matrix of coef. for M^k for %c^%1g',lower(racah_lconv(l)),n_calc)); tic
 
   st_now = racah_states(n_calc,l); num_states = length(st_now); clear cfp;
   for i = 1:num_states
@@ -109,7 +125,8 @@ for n_calc = 3:n
     lTriFact(:,i) = LSdiff(i)-LSdiff;
   end
   lTriFact = tril((-1).^lTriFact,-1);
-  for i = 1:length(st_old)
+  num_old = length(st_old);
+  for i = 1:num_old
     Sb(i) = st_old{i}{1}; Lb(i) = racah_lconv(st_old{i}{2});
   end  
 
@@ -139,14 +156,19 @@ for n_calc = 3:n
         %end
 
         if abs(S(j)-S(i))<=2 && abs(L(j)-L(i))<=2
-        cfplogmat = cfp{i}'*cfp{j}; [inz,jnz] = find( cfplogmat.*oldm22{im} );
-        for p = 1:length(inz);
-          pi = inz(p); pj = jnz(p);
-          mat_el = cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
-                   * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1));
-          m22{im}(i,j) = m22{im}(i,j) + ( mat_el * sixj([S(i) tm S(j); Sb(pj) s Sb(pi)]) ...
-                                                 * sixj([L(i) tm L(j); Lb(pj) l Lb(pi)]) * oldm22{im}(pi,pj) );
-        end
+	  if im==1; mmc{i,j} = sparse(num_old,num_old); mm1{i,j} = mmc; mm2{i,j} = mmc; end
+          [inz,jnz] = find( cfp{i}'*cfp{j}.*oldm22{im} );
+          for p = 1:length(inz);
+            pi = inz(p); pj = jnz(p);
+	    if mmc{i,j}(pi,pj)==0; mmc{i,j}(pi,pj) = cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
+                                                      * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1)); end
+            if mm2{i,j}(pi,pj)==0; mm2{i,j}(pi,pj) = sixj([S(i) tm S(j); Sb(pj) s Sb(pi)])*sixj([L(i) tm L(j); Lb(pj) l Lb(pi)]); end
+            %mat_el = cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
+            %         * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1));
+            %m22{im}(i,j) = m22{im}(i,j) + ( mat_el * sixj([S(i) tm S(j); Sb(pj) s Sb(pi)]) ...
+            %                                       * sixj([L(i) tm L(j); Lb(pj) l Lb(pi)]) * oldm22{im}(pi,pj) );
+	    m22{im}(i,j) = m22{im}(i,j) + ( mmc{i,j}(pi,pj)*mm2{i,j}(pi,pj) * oldm22{im}(pi,pj) );
+          end
         end % if /\S=0,1,2, /\L=0,1,2
 	   % Separate out t=1 and t=2 matrices and apply triangular conditions on six-j's (StS') and (LtL')
 	   % reduces time to 1.3min for f4
@@ -156,14 +178,19 @@ for n_calc = 3:n
     for i = 1:num_states        % Calculates only the upper triangle
       for j = i:num_states      % Lower triangle is related by: <x|H|x'> = (-1)^((L-S)-(L'-S'))<x'|H|x>
         if abs(S(j)-S(i))<=1 && abs(L(j)-L(i))<=1
-        cfplogmat = cfp{i}'*cfp{j}; [inz,jnz] = find( cfplogmat.*oldm11{im} );
-        for p = 1:length(inz);
-          pi = inz(p); pj = jnz(p);
-          mat_el = cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
-                   * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1));
-          m11{im}(i,j) = m11{im}(i,j) + ( mat_el * sixj([S(i) tn S(j); Sb(pj) s Sb(pi)]) ...
-                                                 * sixj([L(i) tn L(j); Lb(pj) l Lb(pi)]) * oldm11{im}(pi,pj) );
-        end
+          %fplogmat = cfp{i}'*cfp{j}; [inz,jnz] = find( cfplogmat.*oldm11{im} );
+          [inz,jnz] = find( cfp{i}'*cfp{j}.*oldm11{im} );
+          for p = 1:length(inz);
+            pi = inz(p); pj = jnz(p);
+	    if mmc{i,j}(pi,pj)==0; mmc{i,j}(pi,pj) = cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
+                                                      * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1)); end
+            if mm1{i,j}(pi,pj)==0; mm1{i,j}(pi,pj) = sixj([S(i) tn S(j); Sb(pj) s Sb(pi)])*sixj([L(i) tn L(j); Lb(pj) l Lb(pi)]); end
+            %mat_el = cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
+            %         * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1));
+            %m11{im}(i,j) = m11{im}(i,j) + ( mat_el * sixj([S(i) tn S(j); Sb(pj) s Sb(pi)]) ...
+            %                                       * sixj([L(i) tn L(j); Lb(pj) l Lb(pi)]) * oldm11{im}(pi,pj) );
+	    m11{im}(i,j) = m11{im}(i,j) + ( mmc{i,j}(pi,pj)*mm1{i,j}(pi,pj) * oldm22{im}(pi,pj) );
+          end
         end % if /\S=0,1, /\L=0,1
       end
     end
@@ -179,16 +206,17 @@ for n_calc = 3:n
   %  save(matfilename,'matrix');
   %end
 
-  if nargin==4
-    H = (m22{1}+m11{1}).*M(1) + (m22{2}+m11{2}).*M(2) + (m22{3}+m11{3}).*M(3);
-    Hss.(sprintf('%c%1g',lower(racah_lconv(l)),n_calc)) = {m22{1} m22{2} m22{3} m11{1} m11{2} m11{3} H};
-  end
+  %if nargin==4
+  %  H = (m22{1}+m11{1}).*M(1) + (m22{2}+m11{2}).*M(2) + (m22{3}+m11{3}).*M(3);
+  %  Hss.(sprintf('%c%1g',lower(racah_lconv(l)),n_calc)) = {m22{1} m22{2} m22{3} m11{1} m11{2} m11{3} H};
+  %end
+  Hss.(sprintf('%c%1g',lower(racah_lconv(l)),n_calc)) = {m22{1} m22{2} m22{3} m11{1} m11{2} m11{3}};
   
   oldm22 = m22; oldm11 = m11;
   st_old = st_now;
 
 end
 
-if nargin~=4
-  Hss = (m22{1}+m11{1}).*M(1) + (m22{2}+m11{2}).*M(2) + (m22{3}+m11{3}).*M(3);
-end
+%if nargin~=4
+%  Hss = (m22{1}+m11{1}).*M(1) + (m22{2}+m11{2}).*M(2) + (m22{3}+m11{3}).*M(3);
+%end

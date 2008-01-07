@@ -40,8 +40,8 @@ if ~isfield(ti,confstring)
     end
     if (toc-time_s)>60; display(sprintf('Calculated t_%1g in %0.2g min',i,toc/60)); end
   end
-  if toc>60; display(sprintf('Time Elapsed: %0.2g min',i,toc/60));
-        else display(sprintf('Time Elapsed: %0.2g s',i,toc)); end
+  if toc>60; display(sprintf('Time Elapsed: %0.2g min\n',i,toc/60));
+        else display(sprintf('Time Elapsed: %0.2g s\n',i,toc)); end
 end
 
 if exist('T')

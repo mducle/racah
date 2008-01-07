@@ -81,18 +81,52 @@ end
 % Checks M,P
 if exist('M','var')
   if isscalar(M) || islogical(M)
-    r_fl = T;
-    clear T;
-  elseif isvector(M) && length(M)==3 && exist('P','var') && length(P)==4
-    HssHsoo = judd_HssHsoo(n,3,M,P);
-  elseif isvector(M) && length(M)==12
-    HssHsoo = judd_HssHsoo(n,3,M);
-    if exist('P','var') && (isscalar(P) || islogical(P))
-      r_fl = P;
-      clear P;
+    r_fl = M;
+    clear M;
+  %elseif isvector(M) && length(M)==3 && exist('P','var') && length(P)==4
+  %  HssHsoo = judd_HssHsoo(n,3,M,P);
+  elseif isvector(M) 
+    if length(M)==3; 
+      if exist('P','var') && length(P)==4
+        %HssHsoo = judd_HssHsoo(n,3,M,P);
+	HssHsoo = crosswhite_HssHsoo(n,3,M,P(2:4));
+      elseif exist('P','var') && length(P)==3
+        %HssHsoo = judd_HssHsoo(n,3,M,[0 P]); 
+	HssHsoo = crosswhite_HssHsoo(n,3,M,P);
+      else
+        %HssHsoo = judd_HssHsoo(n,3,M,[0 0 0 0]); 
+	HssHsoo = crosswhite_HssHsoo(n,3,M,[0 0 0]);
+      end
+    elseif length(M)==4; 
+      P = M; clear M; 
+    else
+      error('M must be a length 3 or 4 vector'); 
     end
+  %elseif isvector(M) && length(M)==12
+  %  HssHsoo = judd_HssHsoo(n,3,M);
+  %  if exist('P','var') && (isscalar(P) || islogical(P))
+  %    r_fl = P;
+  %    clear P;
+  %  end
+  %else
+  %  error('You must specify both M (length 3) and P (length 4), or a single length 12 vector a_i');
+  %end
   else
-    error('You must specify both M (length 3) and P (length 4), or a single length 12 vector a_i');
+    error('M must be a vector');
+  end
+end
+if exist('P','var')
+  if isscalar(P) || islogical(P)
+    r_fl = P;
+    clear P;
+  elseif isvector(P) && length(P)==4
+    %HssHsoo = judd_HssHsoo(n,3,[0 0 0],P);
+    HssHsoo = crosswhite_HssHsoo(n,3,M,P(2:4));
+  elseif isvector(P) && length(P)==3
+    HssHsoo = crosswhite_HssHsoo(n,3,M,P);
+    %HssHsoo = judd_HssHsoo(n,3,[0 0 0],[0 P]);
+  else
+    error('P must be a length 4 vector');
   end
 end
 % Checks r_fl

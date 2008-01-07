@@ -217,6 +217,10 @@ for i = 1:lnst
   end
 end
 
+for ik = 1:3
+  Hcell{5}{ik} = Hcell{3}{ik}+ Hcell{4}{ik};
+end
+
 mkmat = Hcell;
 
 %index = 0;

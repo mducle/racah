@@ -1,10 +1,10 @@
-function Hss = judd_pk(n,l,Pk,cellflag)
+function Hss = judd_pk(n,l,nold,oldp)
 % Calculates the spin-spin Hamiltonian for the l^n configuration by a chain-calculation
 
 if ~isscalar(n) | ~isscalar(l) | ~isnumeric(n) | ~isnumeric(l) 
   error('n, l must be numerical scalars');
-elseif ~isvector(Pk) | length(Pk)~=4
-  error('M must be a three-component vector');
+%elseif ~isvector(Pk) | length(Pk)~=4
+%  error('M must be a three-component vector');
 end
 
 %    '3P'         '3F'           '3H'        '1S'        '1D'        '1G'        '1I'
@@ -50,23 +50,28 @@ p6 = [1287           0              0        -429        -286           0       
 
 p0 = p0+triu(p0,1)'; p2 = p2+triu(p2,1)'; p4 = p4+triu(p4,1)'; p6 = p6+triu(p6,1)';
 
-oldp = {p0 p2 p4 p6}; st_old = racah_states(2,l); s = 1/2; t = 1;
-
-if n==2 
-  Hss = p0.*Pk(1) + p2.*Pk(2) + p4.*Pk(3) + p6.*Pk(4);
-  if nargin~=4
-    return;
-  else
-    Hss.f2 = {p0 p2 p4 p6 Hss};
-    return;
-  end
-elseif n<2 || n>14
-  error('number of equivalent electron, n, must be between 2 and 14');
+if ~exist('nold') || ~exist('oldp')
+  nold = 2;
+  oldp = {p0 p2 p4 p6};
+  Hss.f2 = {p0 p2 p4 p6};
+elseif isstruct(oldp)
+  Hss = oldp;
+  oldp = Hss.(sprintf('%c%1g',lower(racah_lconv(l)),nold));
 end
 
-for n_calc = 3:n
+st_old = racah_states(nold,l); s = 1/2; t = 1;
+
+if n==2
+  return;
+elseif n>(2*(2*l+1))
+  error('number of equivalent electrons, n>2(2l+1), greater than allowed orbital angular momenta');
+elseif n<2
+  error('number of equivalent electrons is invalid (1, 0 or negative!)');
+end
+
+for n_calc = (nold+1):n
     
-  display(sprintf('Calculating matrix for %c^%1g',lower(racah_lconv(l)),n_calc)); tic
+  display(sprintf('Calculating matrix of coef. of P^k for %c^%1g',lower(racah_lconv(l)),n_calc)); tic
 
   st_now = racah_states(n_calc,l); num_states = length(st_now); clear cfp;
   for i = 1:num_states
@@ -80,23 +85,27 @@ for n_calc = 3:n
     lTriFact(:,i) = LSdiff(i)-LSdiff;
   end
   lTriFact = tril((-1).^lTriFact,-1);
-  for i = 1:length(st_old)
+  num_old = length(st_old);
+  for i = 1:num_old
     Sb(i) = st_old{i}{1}; Lb(i) = racah_lconv(st_old{i}{2});
   end  
 
   for im = 1:4
-    pk{im} = zeros(num_states);
+    pk{im} = sparse(num_states,num_states);
     for i = 1:num_states        % Calculates only the upper triangle
       for j = i:num_states      % Lower triangle is related by: <x|H|x'> = (-1)^((L-S)-(L'-S'))<x'|H|x>
         if abs(S(j)-S(i))<=1 && abs(L(j)-L(i))<=1
-        cfplogmat = cfp{i}'*cfp{j}; [inz,jnz] = find( cfplogmat.*oldm11{im} );
-        for p = 1:length(inz);
-          pi = inz(p); pj = jnz(p);
-          mat_el = cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
-                   * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1));
-          pk{im}(i,j) = pk{im}(i,j) + ( mat_el * sixj([S(i) t S(j); Sb(pj) s Sb(pi)]) ...
-                                               * sixj([L(i) t L(j); Lb(pj) l Lb(pi)]) * oldp{im}(pi,pj) );
-        end
+	  if im==1; pm{i,j} = sparse(num_old,num_old); end
+          [inz,jnz] = find( cfp{i}'*cfp{j}.*oldp{im} );
+          for p = 1:length(inz);
+            pi = inz(p); pj = jnz(p);
+	    if pm{i,j}(pi,pj)==0
+              pm{i,j}(pi,pj) = cfp{i}(pi)*cfp{j}(pj) * (-1)^(Sb(pi)+Lb(pi)+s+l+S(j)+L(j)) ...
+                               * sqrt((2*S(i)+1)*(2*S(j)+1)*(2*L(i)+1)*(2*L(j)+1)) ...
+                               * sixj([S(i) t S(j); Sb(pj) s Sb(pi)]) * sixj([L(i) t L(j); Lb(pj) l Lb(pi)]);
+            end
+            pk{im}(i,j) = pk{im}(i,j) + ( pm{i,j}(pi,pj) * oldp{im}(pi,pj) );
+          end
         end % if /\S=0,1, /\L=0,1
       end
     end
@@ -111,16 +120,17 @@ for n_calc = 3:n
   %  save(matfilename,'matrix');
   %end
 
-  if nargin==4
-    H = pk{1}.*Pk(1) + pk{2}.*Pk(2) + pk{3}.*Pk(3) + pk{4}.*Pk(4);
-    Hss.(sprintf('%c%1g',lower(racah_lconv(l)),n_calc)) = {pk{1} pk{2} pk{3} pk{4} H};
-  end
+  %if nargin==4
+  %  H = pk{1}.*Pk(1) + pk{2}.*Pk(2) + pk{3}.*Pk(3) + pk{4}.*Pk(4);
+  %  Hss.(sprintf('%c%1g',lower(racah_lconv(l)),n_calc)) = {pk{1} pk{2} pk{3} pk{4} H};
+  %end
+  Hss.(sprintf('%c%1g',lower(racah_lconv(l)),n_calc)) = {pk{1} pk{2} pk{3} pk{4}};
   
   oldp = pk;
   st_old = st_now;
 
 end
 
-if nargin~=4
-  Hss = pk{1}.*Pk(1) + pk{2}.*Pk(2) + pk{3}.*Pk(3) + pk{4}.*Pk(4);
-end
+%if nargin~=4
+%  Hss = pk{1}.*Pk(1) + pk{2}.*Pk(2) + pk{3}.*Pk(3) + pk{4}.*Pk(4);
+%end
