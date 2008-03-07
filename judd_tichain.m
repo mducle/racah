@@ -23,6 +23,7 @@ if ~isnumeric(n) || ~isscalar(n) || n>(2*(2*l+1))
   error('n must be a numeric scalar less than 2(2l+1)');
 elseif n==3
   ti_out = ti.f3;
+  if exist('T'); ti_out = sparse(17,17); for i = [2 3 4 6 7 8]; ti_out = ti_out + T(i).*ti.f3{i}; end; end
   return;
 elseif n<3
   error('n must be >= 3');

@@ -51,6 +51,12 @@ if iscell(B) & length(B)==3
   if ~isvector(B2) | length(B2)~=5 | ~isvector(B4) | length(B4)~=9 | ~isvector(B6) | length(B6)~=13
     error('B2=B{1},B4=B{2},B6=B{3} must be vectors of length 5, 9, and 13 respectively');
   end
+elseif iscell(B) && length(B)==4 && ischar(B{4})
+  if strncmp(B{4},'s',1)
+    B = B(1:3); B = wy2stev(B,'s');
+  else
+    B = B(1:3);
+  end
 else
   error('B must be a cell array of length 3')
 end
@@ -71,7 +77,8 @@ if exist('T','var')
     r_fl = T;
     clear T;
   elseif isvector(T) && (length(T)==6 || length(T)>=8)
-    timat = judd_tichain(n,3,T);
+    if n<3; warning('3-particle CI interaction requires n>=3. n=%1g, so ignoring T^i parameters',n); else
+    timat = judd_tichain(n,3,T); end
   elseif isvector(T) && length(T)==3 && exist('M','var') && length(M)==4
     P = M; M = T; clear T;
   else
@@ -228,34 +235,68 @@ for i = 1:length(st_SO)
 end
 
 % Calculates the crystal field Hamiltonian
+%
+%         ---   k    [  k        q  k    ]     ---  k  k     ---   k [  k       q  k  ]
+% V   = i >    B     | O   - (-1)  O     |  +  >   B  O   +  >    B  | O  + (-1)  O   |
+%  cf     ---   -|q| [  |q|         -|q| ]     ---  0  0     ---   q [  q          -q ]
+%        k,q<0                                  k           k,q>0  
+%
 H_cf = sparse(length(st_CF),length(st_CF));
 if n<5
   matfile = ['UVmat' sprintf('%1g',n) '.mat'];
   load(matfile);
   U = {U2 U4 U6};
   for k = 1:3
-    for q = 1:(4*k+1)
-      H_cf = H_cf + B{k}(q) .* (U{k}{q}./icfact(k));
+    %for q = 1:(4*k+1)
+    %  H_cf = H_cf + B{k}(q) .* (U{k}{q}./icfact(k));
+    for iq = 1:(4*k+1)
+      q = iq-1-(2*k); qp = 1+(2*k)+abs(q); qm = 1+(2*k)-abs(q);
+      H_cf = H_cf + ( (B{k}(iq)/icfact(k)) .* (U{k}{qp} + (sign(q)*(-1)^q).*U{k}{qm}) ); 
     end
   end
 else
 
   for k = 1:3
-    for q = 1:(4*k+1)
-      if B{k}(q) ~= 0 
-        if q<2*k; matfile = sprintf('UVmat%1gU%1gm%1g.mat',n,2*k,-(q-1-(2*k)));
-        else;     matfile = sprintf('UVmat%1gU%1gk%1g.mat',n,2*k, (q-1-(2*k)));
-	end
-        if exist(matfile,'file')==2
-          load(matfile); 
+    %for q = 1:(4*k+1)
+    for iq = 1:(4*k+1)
+      q = iq-1-(2*k); qp = 1+(2*k)+abs(q); qm = 1+(2*k)-abs(q);
+      %if B{k}(q) ~= 0 
+      %  if q<2*k; matfile = sprintf('UVmat%1gU%1gm%1g.mat',n,2*k,-(q-1-(2*k)));
+      %  else;     matfile = sprintf('UVmat%1gU%1gk%1g.mat',n,2*k, (q-1-(2*k))); end
+      %  if exist(matfile,'file')==2
+      %    load(matfile); 
+      %  else
+      %    display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,q-1-(2*k))); tic;
+      %    U = fast_ukq(n,3,2*k,q-1-(2*k));
+      %    display(sprintf('Time elapsed = %0.5g min',toc/60));
+      %    save(matfile,'U');
+      %  end
+      %  H_cf = H_cf + B{k}(q) .* (U./icfact(k));
+      %  clear U;
+      %end
+      if B{k}(iq) ~= 0
+        matfileP = sprintf('UVmat%1gU%1gk%1g.mat',n,2*k,q);
+        matfileM = sprintf('UVmat%1gU%1gm%1g.mat',n,2*k,q);
+        if exist(matfileP,'file')==2
+          load(matfileP); 
         else
-	  display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,q-1-(2*k))); tic;
-          U = fast_ukq(n,3,2*k,q-1-(2*k));
+          display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,qp)); tic;
+          U = fast_ukq(n,3,2*k,qp);
           display(sprintf('Time elapsed = %0.5g min',toc/60));
-          save(matfile,'U');
-        end
-        H_cf = H_cf + B{k}(q) .* (U./icfact(k));
-        clear U;
+          save(matfileP,'U');
+	end
+	H_cf = H_cf + B{k}(iq) .* (U./icfact(k));
+	clear U;
+        if exist(matfileM,'file')==2
+          load(matfileM); 
+        else
+          display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,qm)); tic;
+          U = fast_ukq(n,3,2*k,qm);
+          display(sprintf('Time elapsed = %0.5g min',toc/60));
+          save(matfileM,'U');
+	end
+	H_cf = H_cf + B{k}(iq) .* (sign(q)*(-1)^q).*(U./icfact(k));
+	clear U;
       end
     end
   end

@@ -71,7 +71,8 @@ if Up==[3 1]         % Use table t2
   elseif U==[2 1]; j = 4;
   elseif U==[3 0]; j = 5;
   %elseif U==[3 1]; j = 6;
-  elseif U==[3 1]; if L==Lp; j = 6; elseif strncmp(L,Lp,1); j = 7; end;
+  %elseif U==[3 1]; if L==Lp; j = 6; elseif strncmp(L,Lp,1); j = 7; end;
+  elseif U==[3 1]; if L==Lp; j = 6; elseif L(1)==Lp(1); j = 7; end;
   else j = 0; end;
   switch L
     case 'P';  i = 1;
@@ -105,7 +106,8 @@ elseif Up==[4 0]     % Use table t3
   elseif U==[2 0]; j = 3;
   elseif U==[3 0]; j = 4;
   %elseif U==[4 0]; j = 5;
-  elseif U==[4 0]; if L==Lp; j = 5; elseif strncmp(L,Lp,1); j = 6; end;
+  %elseif U==[4 0]; if L==Lp; j = 5; elseif strncmp(L,Lp,1); j = 6; end;
+  elseif U==[4 0]; if L==Lp; j = 5; elseif L(1)==Lp(1); j = 6; end;
   else j = 0; end;
   switch L
     case 'S';  i = 1;
