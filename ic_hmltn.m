@@ -126,12 +126,15 @@ if exist('P','var')
   if isscalar(P) || islogical(P)
     r_fl = P;
     clear P;
-  elseif isvector(P) && length(P)==4
-    %HssHsoo = judd_HssHsoo(n,3,[0 0 0],P);
-    HssHsoo = crosswhite_HssHsoo(n,3,M,P(2:4));
-  elseif isvector(P) && length(P)==3
-    HssHsoo = crosswhite_HssHsoo(n,3,M,P);
-    %HssHsoo = judd_HssHsoo(n,3,[0 0 0],[0 P]);
+  elseif isvector(P)
+    if length(P)==4
+      %HssHsoo = judd_HssHsoo(n,3,[0 0 0],P);
+      Pmat = crosswhite_HssHsoo(n,3,M,P(2:4));
+    elseif length(P)==3
+      Pmat = crosswhite_HssHsoo(n,3,M,P);
+      %HssHsoo = judd_HssHsoo(n,3,[0 0 0],[0 P]);
+    end
+    if exist('HssHsoo','var'); HssHsoo = HssHsoo + Pmat; else; HssHsoo = Pmat; end
   else
     error('P must be a length 4 vector');
   end
@@ -198,16 +201,29 @@ else
   H_SO = H_SO.*xi;
 end
 % Re-expresses the electrostatic energy matrix from the |vUSL> basis to the |vUSLJ> basis
-lstSO = length(st_SO); H_El = sparse(lstSO,lstSO);
-for i = 1:lstSO
-  for j = 1:lstSO
-    if (st_SO{i}{5}==st_SO{j}{5}) % J==J'
-      H_El(i,j) = Emat(st_SO{i}{6},st_SO{j}{6});
+%lstSO = length(st_SO); H_El = sparse(lstSO,lstSO);
+%for i = 1:lstSO
+%  for j = 1:lstSO
+%    if (st_SO{i}{5}==st_SO{j}{5}) % J==J'
+%      H_El(i,j) = Emat(st_SO{i}{6},st_SO{j}{6});
+%    end
+%  end
+%end
+  st_SI = racah_states(n,3); id = 0; icv = 0; icv1 = 0; icv2 = 0;
+  for i = 1:length(st_SI)
+    L = racah_lconv(st_SI{i}{2});
+    S = st_SI{i}{1};
+    Jmin = abs(L-S); Jmax = L+S;
+    cvSI2SO(i,1) = icv1+1; icv1=icv1+(Jmax-Jmin+1); cvSI2SO(i,2) = icv1;      % Keeps a running index for the convH2H subroutine
+    cvSI2CF(i,1) = icv2+1; icv2=icv2+sum(2.*[Jmin:Jmax]+1);                   %   first to convert from |vUSL> to |vUSLJ>
+    cvSI2CF(i,2) = icv2;                                                      % This time for conversion from |vUSL> to |vUSLJmJ>
+    for J = Jmin:Jmax
+      id = id + 1;
+      cvSO2CF(id,1) = icv+1; icv=icv+(2*J+1); cvSO2CF(id,2) = icv;            % Keeps a running index for the convH2H subroutine
     end
   end
-end
 % Calculates the Russell-Saunders (LS) coupling basis states from the Electrostatic+SO Hamiltonians.
-H_LS = H_El + H_SO;
+H_LS = convH2H(Emat,length(H_SO),cvSI2SO) + H_SO;
 
 % Adds in the spin-spin, spin-other-orbit, and spin-orbit configuration interactions if applicable
 if exist('HssHsoo')
@@ -224,15 +240,15 @@ end
 %end
 
 % Re-expresses the LS matrix from the |vUSLJ> basis to the |vUSLJm> basis, same as the CF matrix.
-index = 0;
-for i = 1:length(st_SO)
-  J = st_SO{i}{5};
-  for mJ = -J:J
-    index = index + 1;
-    i_ic(index) = i;
-    st_CF{index} = {st_SO{i}{1:5} mJ};
-  end
-end
+%index = 0;
+%for i = 1:length(st_SO)
+%  J = st_SO{i}{5};
+%  for mJ = -J:J
+%    index = index + 1;
+%    i_ic(index) = i;
+%    st_CF{index} = {st_SO{i}{1:5} mJ};
+%  end
+%end
 
 % Calculates the crystal field Hamiltonian
 %
@@ -241,7 +257,8 @@ end
 %  cf     ---   -|q| [  |q|         -|q| ]     ---  0  0     ---   q [  q          -q ]
 %        k,q<0                                  k           k,q>0  
 %
-H_cf = sparse(length(st_CF),length(st_CF));
+%H_cf = sparse(length(st_CF),length(st_CF));
+H_cf = sparse(icv2,icv2);
 if n<5
   matfile = ['UVmat' sprintf('%1g',n) '.mat'];
   load(matfile);
@@ -280,23 +297,25 @@ else
         if exist(matfileP,'file')==2
           load(matfileP); 
         else
-          display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,qp)); tic;
-          U = fast_ukq(n,3,2*k,qp);
+          display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,abs(q))); tic;
+          [U,st_CF] = fast_ukq(n,3,2*k,abs(q));
           display(sprintf('Time elapsed = %0.5g min',toc/60));
-          save(matfileP,'U');
+          save(matfileP,'U','st_CF');
 	end
 	H_cf = H_cf + B{k}(iq) .* (U./icfact(k));
 	clear U;
-        if exist(matfileM,'file')==2
-          load(matfileM); 
-        else
-          display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,qm)); tic;
-          U = fast_ukq(n,3,2*k,qm);
-          display(sprintf('Time elapsed = %0.5g min',toc/60));
-          save(matfileM,'U');
+	if q~=0
+          if exist(matfileM,'file')==2
+            load(matfileM); 
+          else
+            display(sprintf('Calculating CF Matrix k=%1g,q=%1g',2*k,-abs(q))); tic;
+            [U,st_CF] = fast_ukq(n,3,2*k,-abs(q));
+            display(sprintf('Time elapsed = %0.5g min',toc/60));
+            save(matfileM,'U','st_CF');
+          end
+          H_cf = H_cf + B{k}(iq) .* (sign(q)*(-1)^q).*(U./icfact(k));
+	  clear U;
 	end
-	H_cf = H_cf + B{k}(iq) .* (sign(q)*(-1)^q).*(U./icfact(k));
-	clear U;
       end
     end
   end
@@ -304,10 +323,23 @@ else
 end
 
 % Re-expresses the LS matrix from the |vUSLJ> basis to the |vUSLJm> basis, same as the CF matrix.
-for i = 1:length(st_CF)
-  for j = 1:length(st_CF)
-    if (st_CF{i}{6}==st_CF{j}{6})   % mJ==mJ'
-      H_cf(i,j) = H_LS(i_ic(i),i_ic(j)) + H_cf(i,j);
-    end
+%for i = 1:length(st_CF)
+%  for j = 1:length(st_CF)
+%    if (st_CF{i}{6}==st_CF{j}{6})   % mJ==mJ'
+%      H_cf(i,j) = H_LS(i_ic(i),i_ic(j)) + H_cf(i,j);
+%    end
+%  end
+%end
+H_cf = convH2H(H_LS,length(H_cf),cvSO2CF) + H_cf;
+
+% ------------------------------------------------------------------------------------------------------------------------------- %
+% Routine to convert a matrix from one basis to another, e.g from |vUSL> to |vUSLJmJ>
+% ------------------------------------------------------------------------------------------------------------------------------- %
+function Hout = convH2H(Hin,lnOut,cv)
+  Hout = sparse(lnOut,lnOut);
+  [inz,jnz] = find(Hin);
+  for id = 1:length(inz)
+    i = inz(id); j = jnz(id);
+    m = cv(i,2)-cv(i,1)+1; n = cv(j,2)-cv(j,1)+1;
+    Hout(cv(i,1):cv(i,2),cv(j,1):cv(j,2)) = spdiags(ones(min(n,m),1).*Hin(i,j),0,n,m);   % Elements only on the diagonals
   end
-end

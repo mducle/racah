@@ -17,7 +17,7 @@ function mag = ic_mag(Hic,H,Jdir,T,mu)
 
 % Physical constants. Taken from NIST Reference on Constants, Units, and 
 % Uncertainty, http://physics.nist.gov/cuu/Constants/
-%mu_B  = 927.400949e-26;    % J/Tesla - Bohr magneton
+mu_BJ = 927.400949e-26;    % J/Tesla - Bohr magneton
 %Hic = Hic .* 0.1239842436; % Converts to meV. 
 %mu_B = 5.78838263e-2;    % meV/T - Bohr magneton
 mu_B  = 0.46686437;        % cm^{-1} / Tesla - Bohr magneton
@@ -36,6 +36,19 @@ Jmat = mu{1}.*Jdir(1) + mu{2}.*Jdir(2) + mu{3}.*Jdir(3);
 % Defining beta = 1/kT here saves computation later on.
 beta = 1 ./ (k_B*T);
 
+% Defines smallness criteria
+small = 1e-6 * (Q_e/1000);
+
+% Symmetrises the IC Hamiltonian - if not, Matlab uses the QZ algorithm, and the small differences
+%   between the upper and lower triangles will causes large numerical errors in the matrix elements
+%   in the second order term!
+if sum(sum(abs(Hic-Hic')))<(small*1000/Q_e)
+  Hic = full( triu(Hic) + triu(Hic,1)' );
+  Jmat = full( triu(Jmat) + triu(Jmat,1)' );
+else
+  error('Input Hamiltonian is not symmetric!');
+end
+
 for ind_H = 1:size(H,2)
 % Calculates the total Hamiltonian as a function of field (last index)
   Hmltn = Hic + (-H(ind_H)*mu_B).*Jmat;
@@ -46,6 +59,10 @@ for ind_H = 1:size(H,2)
 %           i       ---i  i      z,i
 %
   [V, E] = eig(Hmltn);
+  %for i = 1:size(V,2)
+  %  t=sort(V(:,i)); %V(find(V(:,i)<t(length(V)-10)),i) = 0;
+  %  V(find(V(:,i)<t(2)),i)=0;
+  %end
 
 % Reduce the energy levels to a vector.
   E = real(diag(E)); 
@@ -58,12 +75,30 @@ for ind_H = 1:size(H,2)
 % Converts energy levels from cm^{-1} to J - NB. E = hf = hc/lambda in metres!
   E = E .* (h*c*100);
 
+% Truncates higher energies to speed up calculations
+  %E(find(E>(k_B*max(T)*80))) = []; length(E)
+  Emax = sort(E); Emax = Emax(200); E(find(E>Emax)) = []; length(E)
+  % NB. Depending on the level of truncation, the higher temperature magnetisation will deviate by a maximum of
+  %     about 10% at 300K. If you have to calculate high temperature susceptibility, consider using ic_susc.m
+  %     Or modify the above code to increase the energy above which truncation occurs. Mind that this will 
+  %     increase calculation time by about 1min for every 10kT(max) on a 1.46Gz Pentium Core 1. 
+
   for ind_j = 1:length(E)
 % Calculates the matrix elements <Vi|J.H|Vi>
     me = V(:,ind_j)' * Jmat * V(:,ind_j);
 
+    % Calculates the nondegenerate second order terms
+    i_ndegen = find( (abs(E-E(ind_j))>=small) );
+    me_ndegen = zeros(1,length(i_ndegen)); %ndegen(:,ind_j) = zeros(length(T),1);
+    for id_j = 1:length(i_ndegen)
+      ind_i = i_ndegen(id_j);
+      me_ndegen(id_j) = V(:,ind_i)' * Jmat * V(:,ind_j); 
+      me_ndegen(id_j) = ( mu_BJ*H(ind_H) * conj(me_ndegen(id_j))*me_ndegen(id_j) ) / ( E(ind_i) - E(ind_j) );
+    end
+
 % Calculates the elements of the expectation of J.H: <i|J.H|i> exp(-Ei(H)/kT)
-    JH(:,ind_j) = me * exp(-beta .* E(ind_j));
+    %JH(:,ind_j) = me * exp(-beta .* E(ind_j));
+    JH(:,ind_j) = (me - sum(me_ndegen)) .* exp(-beta .* E(ind_j));
 
 % Calculates the elements of the partition function: exp(-Ei(H)/kT)
     Z(:,ind_j) = exp(-beta .* E(ind_j));

@@ -1,20 +1,5 @@
 function susceptibility = ic_susc(Hic,mu,T)
 
-if iscell(Hic)
-  V = Hic{1}; E = Hic{2};
-  if ~isvector(E)
-    E = diag(E);
-  end
-  if (length(E) ~= size(V,1))
-    error('V and E must have same size or length');
-  end
-  E = real(E) - min(real(E));
-else
-  [V,E] = eig(Hic);
-  E = diag(E);
-  E = E - min(E);
-end
-
 % Physical constants. Taken from NIST Reference on Constants, Units, and 
 % Uncertainty, http://physics.nist.gov/cuu/Constants/
 mu_B  = 927.400949e-26;    % J/Tesla - Bohr magneton
@@ -25,6 +10,36 @@ N_A   = 6.0221415e23;      % Avogadro's number
 h     = 6.62606896e-34;    % Js - Planck's constant
 c     = 299792458;         % m/s - speed of light in vacuum
 
+% Defines smallness criteria
+small = 1e-5 * (Q_e/1000);
+
+if iscell(Hic)
+  V = Hic{1}; E = Hic{2};
+  if ~isvector(E)
+    E = diag(E);
+  end
+  if (length(E) ~= size(V,1))
+    error('V and E must have same size or length');
+  end
+  E = real(E) - min(real(E));
+else
+  % Symmetrises the IC Hamiltonian - if not, Matlab uses the QZ algorithm, and the small differences
+  %   between the upper and lower triangles will causes large numerical errors in the matrix elements
+  %   in the second order term!
+  if sum(sum(abs(Hic-Hic')))<(small*1000/Q_e)
+    Hic = triu(Hic) + triu(Hic,1)';
+  else
+    error('Input Hamiltonian is not symmetric!');
+  end
+  [V,E] = eig(full(Hic));
+  %for i = 1:size(V,2)
+  %  t=sort(V(:,i)); %V(find(V(:,i)<t(length(V)-200)),i) = 0;
+  %  V(find(V(:,i)<t(1)),i)=0;
+  %end
+  E = diag(E);
+  E = E - min(E);
+end
+
 % Defining beta = 1/kT here saves computation later on.
 beta = 1 ./ (k_B*T);
 
@@ -32,15 +47,15 @@ beta = 1 ./ (k_B*T);
 %E = E .* (Q_e/1000);
 E = E .* (h*c*100);
 
-% Defines smallness criteria
-small = 1e-5 * (Q_e/1000);
-
 % Defines the limit of energy levels to calculate for
-upElimit = 10000 * (h*c*100); % 15000cm-1
+%upElimit = 10000 * (h*c*100); % 15000cm-1
+upElimit = k_B*max(T)*100;    % 10kT_max
+%upElimit = max(E);            % No Limits!
 
 iVs = find(E<(upElimit));     % Limits calculations to lower levels (<1eV) to save time
+ticf = 50;
 for id_i = 1:length(iVs)
-  tic
+  if mod(id_i,ticf)==0; tic; end
   ind_i = iVs(id_i);
   % Calculates the degenerate terms
   i_degen = find(abs(E-E(ind_i))<small);
@@ -49,7 +64,7 @@ for id_i = 1:length(iVs)
     ind_j = i_degen(id_j);
     me_degen(ind_j) = V(:,ind_i)' * mu * V(:,ind_j);
   end
-  degen(ind_i) = sum(-me_degen.^2);
+  degen(ind_i) = sum(me_degen.^2);
 
   % Calculates the nondegenerate terms
   i_ndegen = find( (abs(E-E(ind_i))>=small) & E<(upElimit) );  % Limits calcs to levels <1eV to save time 
@@ -64,7 +79,7 @@ for id_i = 1:length(iVs)
 
   % Calculates the elements of the partition function: exp(-Ei(H)/kT)
   Z(:,ind_i) = exp(-beta .* E(ind_i));
-  display(sprintf('Loop %1g of %1g completed in %0.2g min',id_i,length(iVs),toc/60));
+  if mod(id_i,ticf)==0; display(sprintf('Loop %1g of %1g completed in %0.2g s',id_i,length(iVs),toc)); end
 end
 
 for ind_T = 1:size(T,2)
@@ -75,7 +90,7 @@ for ind_T = 1:size(T,2)
   susceptibility(ind_T) = ( mu_B^2/sum(Z(ind_T,:)) ) * sum_gamma;
 end
 
-%susceptibility = susceptibility./mu_B;  % in u_B/T/atom
+susceptibility = susceptibility./mu_B;  % in u_B/T/atom
 
 
 % Calculates the magnetisation M(ind_H,ind_T) per unit volume per atom;
