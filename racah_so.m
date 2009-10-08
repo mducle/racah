@@ -1,6 +1,8 @@
 function [somat,states] = racah_so(n,l,xi)
 % Calculates the spin-orbit matrix for l^n electrons
 
+nn = n; if nn>7; n=14-n; end
+
 statesLS     = racah_states(n,l);
 statesparent = racah_states(n-1,l);
 
@@ -46,3 +48,5 @@ for i = 1:lnst
     end
   end
 end
+
+if nn>7; somat = -somat; end  % Cf. Racah 3

@@ -34,7 +34,7 @@ else
 end
 
 % Checks n is integer and less than 7
-if mod(n,1)~=0 | n>7 | n<0
+if mod(n,1)~=0 | n>14 | n<0
   error('number of electrons n must be integer between 0 and 7');
 end
 % Checks F is correct format

@@ -5,6 +5,8 @@ if ~exist('states')
   states = racah_states(n,l);
 end
 
+if n>7; n=14-n; end
+
 for j = 1:length(states)
   for i = 1:j %length(states)
 

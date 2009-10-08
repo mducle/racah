@@ -1,6 +1,8 @@
 function Umat = racah_Umat(n,l,k,states)
 % Calculates the U^k matrix elements (UvSL||U^k||U'v'SL') for the f^n configuration
 
+nn = n; if nn>7; n=14-nn; end;
+
 if ~exist('states')
 states       = racah_states(n,l); end
 statesparent = racah_states(n-1,l);
@@ -39,3 +41,5 @@ for i = 1:num_states
 end
 
 Umat = Umat + Umat'.*lTriFact;
+
+if nn>7; Umat = -(-1)^k .* Umat; end   % Cf. Racah 3.

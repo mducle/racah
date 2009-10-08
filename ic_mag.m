@@ -77,7 +77,8 @@ for ind_H = 1:size(H,2)
 
 % Truncates higher energies to speed up calculations
   %E(find(E>(k_B*max(T)*80))) = []; length(E)
-  Emax = sort(E); Emax = Emax(200); E(find(E>Emax)) = []; length(E)
+  if length(Hmltn)>200; maxE=200; else; maxE = length(Hmltn); end
+  Emax = sort(E); Emax = Emax(maxE); E(find(E>Emax)) = []; length(E);
   % NB. Depending on the level of truncation, the higher temperature magnetisation will deviate by a maximum of
   %     about 10% at 300K. If you have to calculate high temperature susceptibility, consider using ic_susc.m
   %     Or modify the above code to increase the energy above which truncation occurs. Mind that this will 

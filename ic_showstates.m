@@ -39,7 +39,14 @@ function alpha = alpha(conf,state)
 S = state{1}; v = state{3}; U = state{4};
 if ischar(state{2}); L = state{2}; else; L = racah_lconv(state{2}); end
 
+if isnumeric(conf)
+  if conf(1)>7; conf = ['f' 14-conf(1)+48];
+  else conf = ['f' conf(1)+48]; end
+end
+
 switch conf
+  case 'f2'
+    alpha = '';
   case 'f5'
     if S==2.5 | (S==1.5 & (L=='S' | L=='L' | L=='M') ) | (S==0.5 & (L=='N' | L=='O') )
       alpha = '';
@@ -110,10 +117,10 @@ switch conf
         case 'M'
 	  if U==[3 0]; alpha='1'; else; alpha='2'; end
       end	
-    end;
+    end;   % case 'f5'
   otherwise
     alpha='';
-end   % case 'f5'
+end
 
 %f1	2F	1 100 10
 %
